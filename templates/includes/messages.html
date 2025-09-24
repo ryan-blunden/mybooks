@@ -1,0 +1,21 @@
+{% if messages %}
+    {% for message in messages %}
+        {% if message.tags == "error" %}
+            {% component "AlertError" %}
+                {{ message|safe }}
+            {% endcomponent %}
+        {% elif message.tags == "success" %}
+            {% component "AlertSuccess" %}
+                {{ message|safe }}
+            {% endcomponent %}
+        {% elif message.tags == "warning" %}
+            {% component "AlertWarning" %}
+                {{ message|safe }}
+            {% endcomponent %}
+        {% else %}
+            {% component "AlertInfo" %}
+                {{ message|safe }}
+            {% endcomponent %}
+        {% endif %}
+    {% endfor %}
+{% endif %}

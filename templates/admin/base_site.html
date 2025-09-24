@@ -1,0 +1,10 @@
+{% extends "admin_interface:admin/base_site.html" %}
+
+{% block extrahead %}
+  {{ block.super }}
+  <meta name="csrf-token" content="{{ csrf_token }}" />
+
+  <link rel="stylesheet" href="{% static "app/css/admin.css" %}">
+
+{% endblock %}
+

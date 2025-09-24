@@ -1,0 +1,26 @@
+{% load static tz tailwind_tags %}
+
+{% localtime on %}
+    <!DOCTYPE html>
+    <html lang="en" class="dark">
+        <head>
+            {% block head %}
+                <title>{% block title %} {% endblock %}</title>
+                <meta charset="utf-8" />
+                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+                <meta name="csrf-token" content="{{ csrf_token }}" />
+                {% block head_meta %} {% endblock %}
+                <link rel="shortcut icon" href="{% static 'core/img/favicon.ico' %}" />
+
+                {% tailwind_css %}
+                <link href="{% static 'app/css/app.css' %}{{ cachebust }}" rel="stylesheet" />
+                <script src="{% static "app/vendor/flowbite-3.1.2.js" %}"></script>
+            {% endblock %}
+        </head>
+
+        <body class="bg-white dark:bg-gray-900 antialiased !p-0 {% block body_classes %}{% endblock %}">
+            {% block body %}{% endblock %}
+        </body>
+    </html>
+{% endlocaltime %}

@@ -1,0 +1,35 @@
+{
+  "makefile.configureOnOpen": false,
+  "flake8.args": [
+    "--config=.flake8"
+  ],
+  "files.watcherExclude": {
+    ".git/objects/**": true,
+    ".git/subtree-cache/**": true,
+    "venv/*/**": true
+  },
+  "files.associations": {
+    "*.css": "tailwindcss",
+    "*.html": "django-html",
+    "*.tpl": "django-html"
+  },
+  "[django-html]": {
+    // "editor.formatOnSave": true,
+    // "editor.defaultFormatter": "junstyle.vscode-django-support"
+  },
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  "tailwindCSS.includeLanguages": {
+    "django-html": "html"
+  },
+  "tailwindCSS.experimental.configFile": "core/theme/css/source.css",
+  "editor.tabCompletion": "on",
+  "emmet.includeLanguages": {
+    "django-html": "html"
+  },
+  "python-envs.defaultEnvManager": "ms-python.python:venv",
+  "python-envs.pythonProjects": [],
+  
+  "debugpy.debugJustMyCode": false
+}
