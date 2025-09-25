@@ -128,6 +128,28 @@ paths:
                     description: List of recently joined users
           description: Recently joined users
   /api/users/{id}/:
+    get:
+      operationId: users_retrieve
+      description: Get detailed information about a specific user
+      summary: Get user details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - oauth2:
+        - users
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Detailed user information
+        '404':
+          description: User not found
     put:
       operationId: users_update
       description: Update user information
@@ -164,6 +186,28 @@ paths:
           description: Validation error
         '404':
           description: User not found
+    delete:
+      operationId: users_destroy
+      description: Delete a user account
+      summary: Delete user
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - oauth2:
+        - users
+      - tokenAuth: []
+      responses:
+        '204':
+          description: User successfully deleted
+        '404':
+          description: User not found
     patch:
       operationId: users_partial_update
       description: Partially update user information
@@ -197,50 +241,6 @@ paths:
           description: User successfully updated
         '400':
           description: Validation error
-        '404':
-          description: User not found
-    delete:
-      operationId: users_destroy
-      description: Delete a user account
-      summary: Delete user
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user.
-        required: true
-      tags:
-      - users
-      security:
-      - oauth2:
-        - users
-      - tokenAuth: []
-      responses:
-        '204':
-          description: User successfully deleted
-        '404':
-          description: User not found
-    get:
-      operationId: users_retrieve
-      description: Get detailed information about a specific user
-      summary: Get user details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user.
-        required: true
-      tags:
-      - users
-      security:
-      - oauth2:
-        - users
-      - tokenAuth: []
-      responses:
-        '200':
-          description: Detailed user information
         '404':
           description: User not found
   /api/groups/:
@@ -453,56 +453,6 @@ paths:
           description: Validation error, missing required fields, or book already
             exists in user's collection
   /api/books/{id}/:
-    put:
-      operationId: update_book_reading_status_in_collection
-      description: Update the reading status and tracking information for a book in
-        the authenticated user's collection using the userbook_id. This endpoint allows
-        changing the reading_status (want_to_read, reading, finished, dropped) and
-        automatically manages related date fields based on status transitions. When
-        status changes to 'reading', date_started is set to current time. When status
-        changes to 'finished', date_finished is set to current time. Use this tool
-        when a user progresses through reading a book or changes their intent for
-        a book in their collection. The userbook_id identifies the specific user-book
-        relationship to update. You cannot change which book this relationship points
-        to - only the user's interaction with that book. The system validates status
-        transitions and ensures dates remain consistent. Requires the complete object
-        data (PUT method). PATCH method is not supported due to technical issues -
-        use PUT for all updates. Requires user authentication and ownership of the
-        userbook relationship.
-      summary: Update reading status and tracking for book in user's collection
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user book.
-        required: true
-      tags:
-      - user-books
-      - collection
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-      security:
-      - oauth2:
-        - write
-      - tokenAuth: []
-      responses:
-        '200':
-          description: Book reading status successfully updated with automatic date
-            management
-        '400':
-          description: Validation error or invalid status transition
-        '404':
-          description: UserBook relationship not found in authenticated user's collection
     get:
       operationId: get_book_from_user_collection
       description: Retrieve comprehensive information about a specific book in the
@@ -571,6 +521,56 @@ paths:
         '204':
           description: Book and all tracking data successfully removed from user's
             collection
+        '404':
+          description: UserBook relationship not found in authenticated user's collection
+    put:
+      operationId: update_book_reading_status_in_collection
+      description: Update the reading status and tracking information for a book in
+        the authenticated user's collection using the userbook_id. This endpoint allows
+        changing the reading_status (want_to_read, reading, finished, dropped) and
+        automatically manages related date fields based on status transitions. When
+        status changes to 'reading', date_started is set to current time. When status
+        changes to 'finished', date_finished is set to current time. Use this tool
+        when a user progresses through reading a book or changes their intent for
+        a book in their collection. The userbook_id identifies the specific user-book
+        relationship to update. You cannot change which book this relationship points
+        to - only the user's interaction with that book. The system validates status
+        transitions and ensures dates remain consistent. Requires the complete object
+        data (PUT method). PATCH method is not supported due to technical issues -
+        use PUT for all updates. Requires user authentication and ownership of the
+        userbook relationship.
+      summary: Update reading status and tracking for book in user's collection
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user book.
+        required: true
+      tags:
+      - user-books
+      - collection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+      security:
+      - oauth2:
+        - write
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Book reading status successfully updated with automatic date
+            management
+        '400':
+          description: Validation error or invalid status transition
         '404':
           description: UserBook relationship not found in authenticated user's collection
   /api/authors/:
@@ -756,6 +756,38 @@ paths:
           description: Validation error, invalid rating, or user has already reviewed
             this book
   /api/reviews/{id}/:
+    get:
+      operationId: get_user_review_details
+      description: Retrieve complete information about a specific review written by
+        the authenticated user using the review_id. This endpoint returns the full
+        review details including the star rating, complete review text, creation and
+        last update timestamps, and comprehensive information about the book being
+        reviewed (title, author, genre, description). Use this tool when you need
+        detailed information about a specific review, such as when editing a review
+        or displaying full review content. The review_id must correspond to a review
+        written by the authenticated user - users cannot access reviews written by
+        other users through this endpoint. The response includes both the review data
+        and associated book metadata for context. Returns 404 if the review_id doesn't
+        exist or doesn't belong to the authenticated user. Requires user authentication.
+      summary: Get detailed information about a specific user review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - reviews
+      security:
+      - oauth2:
+        - write
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Complete review details with associated book information
+        '404':
+          description: Review not found or not owned by authenticated user
     put:
       operationId: update_user_book_review
       description: Update an existing review written by the authenticated user using
@@ -801,6 +833,38 @@ paths:
           description: Review successfully updated with new rating and/or text content
         '400':
           description: Validation error or invalid rating value
+        '404':
+          description: Review not found or not owned by authenticated user
+    delete:
+      operationId: delete_user_book_review
+      description: Permanently delete a review written by the authenticated user using
+        the review_id. This operation completely removes the review from the system
+        including the rating, text content, and all associated metadata. The action
+        is irreversible - if the user wants to review the book again, they will need
+        to create a completely new review. Use this tool when a user no longer wants
+        their review to be part of the book's review collection or wants to remove
+        their opinion from the system. This does not affect the book itself or the
+        user's collection relationship to the book - it only removes the review. The
+        book remains in the user's collection with whatever reading status it had.
+        The review_id must correspond to a review owned by the authenticated user.
+        Requires user authentication and ownership of the review.
+      summary: Permanently delete a book review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - reviews
+      security:
+      - oauth2:
+        - write
+      - tokenAuth: []
+      responses:
+        '204':
+          description: Review permanently deleted from the system
         '404':
           description: Review not found or not owned by authenticated user
     patch:
@@ -849,73 +913,9 @@ paths:
           description: Validation error or invalid field values
         '404':
           description: Review not found or not owned by authenticated user
-    delete:
-      operationId: delete_user_book_review
-      description: Permanently delete a review written by the authenticated user using
-        the review_id. This operation completely removes the review from the system
-        including the rating, text content, and all associated metadata. The action
-        is irreversible - if the user wants to review the book again, they will need
-        to create a completely new review. Use this tool when a user no longer wants
-        their review to be part of the book's review collection or wants to remove
-        their opinion from the system. This does not affect the book itself or the
-        user's collection relationship to the book - it only removes the review. The
-        book remains in the user's collection with whatever reading status it had.
-        The review_id must correspond to a review owned by the authenticated user.
-        Requires user authentication and ownership of the review.
-      summary: Permanently delete a book review
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this review.
-        required: true
-      tags:
-      - reviews
-      security:
-      - oauth2:
-        - write
-      - tokenAuth: []
-      responses:
-        '204':
-          description: Review permanently deleted from the system
-        '404':
-          description: Review not found or not owned by authenticated user
-    get:
-      operationId: get_user_review_details
-      description: Retrieve complete information about a specific review written by
-        the authenticated user using the review_id. This endpoint returns the full
-        review details including the star rating, complete review text, creation and
-        last update timestamps, and comprehensive information about the book being
-        reviewed (title, author, genre, description). Use this tool when you need
-        detailed information about a specific review, such as when editing a review
-        or displaying full review content. The review_id must correspond to a review
-        written by the authenticated user - users cannot access reviews written by
-        other users through this endpoint. The response includes both the review data
-        and associated book metadata for context. Returns 404 if the review_id doesn't
-        exist or doesn't belong to the authenticated user. Requires user authentication.
-      summary: Get detailed information about a specific user review
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this review.
-        required: true
-      tags:
-      - reviews
-      security:
-      - oauth2:
-        - write
-      - tokenAuth: []
-      responses:
-        '200':
-          description: Complete review details with associated book information
-        '404':
-          description: Review not found or not owned by authenticated user
   /api/browse/:
     get:
-      operationId: browse_all_available_books
+      operationId: search_available_books
       description: Browse through the complete catalog of all books available in the
         system for discovery and exploration purposes. This endpoint returns all books
         that exist in the system regardless of whether they are in any user's personal
@@ -1048,7 +1048,6 @@ paths:
           authors, or books containing certain keywords in their descriptions.
       tags:
       - books
-      - browse
       security:
       - oauth2:
         - read
@@ -1082,7 +1081,6 @@ paths:
         required: true
       tags:
       - books
-      - browse
       security:
       - oauth2:
         - read
@@ -1092,6 +1090,89 @@ paths:
           description: Complete book information with author details and metadata
         '404':
           description: Book not found in the system catalog
+  /api/genres/:
+    get:
+      operationId: list_available_book_genres
+      description: Retrieve a comprehensive list of all book genres available in the
+        system with statistical information. This endpoint returns each genre with
+        its identifier, human-readable name, total book count, and optional descriptive
+        information. Use this tool when you need to display genre categories for filtering,
+        show users what types of books are available, or provide genre selection options
+        for book discovery and collection management. Each genre entry includes the
+        total number of books currently available in that category, helping users
+        understand the breadth of content in each genre. The response includes all
+        predefined genres supported by the system regardless of whether books currently
+        exist in each category. Results are sorted alphabetically by genre name for
+        consistent presentation. This is a read-only endpoint that provides system-wide
+        genre information and requires user authentication for access.
+      summary: List all available book genres with metadata
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -book_count
+          - -name
+          - book_count
+          - name
+        description: 'Sort the genre list by specified field. Available options: ''name''
+          (alphabetical), ''book_count'' (most books first), ''-name'' (reverse alphabetical),
+          ''-book_count'' (fewest books first). Default is alphabetical by name for
+          consistent browsing experience.'
+      - in: query
+        name: search
+        schema:
+          type: string
+        description: Search genres by name or description content. Performs case-insensitive
+          text search across genre names and descriptions to help find specific genre
+          categories. Use this to locate particular genres or genres with specific
+          characteristics mentioned in their descriptions.
+      tags:
+      - genres
+      - metadata
+      security:
+      - oauth2:
+        - read
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Complete list of book genres with book counts and metadata
+  /api/genres/{id}/:
+    get:
+      operationId: get_genre_details_and_statistics
+      description: Retrieve comprehensive information about a specific book genre
+        using the genre identifier (slug). This endpoint returns detailed genre information
+        including the human-readable name, complete description, total book count,
+        and statistical metadata about books in this category. Use this tool when
+        you need detailed information about a specific genre, such as when displaying
+        genre-specific pages, providing genre descriptions to users, or showing detailed
+        statistics about book categories. The genre_id should be the slug format identifier
+        (e.g., 'science_fiction', 'fantasy', 'historical_fiction'). The response includes
+        comprehensive metadata about the genre and its usage within the book collection
+        system. Returns 404 if the genre_id doesn't correspond to a valid genre supported
+        by the system. This does not return the actual books in the genre - for that,
+        use the book browsing endpoints with genre filtering. Requires user authentication.
+      summary: Get detailed information about a specific genre
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+        description: Genre identifier (slug format, e.g. 'science_fiction', 'fantasy')
+        required: true
+      tags:
+      - genres
+      - metadata
+      security:
+      - oauth2:
+        - read
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Detailed genre information with statistics and metadata
+        '404':
+          description: Genre not found - invalid genre identifier provided
 components:
   schemas:
     AuthorRequest:
@@ -1483,12 +1564,20 @@ components:
   securitySchemes:
     oauth2:
       type: oauth2
-      flows: {}
+      flows:
+        authorizationCode:
+          authorizationUrl: https://hypolimnial-wai-modularly.ngrok-free.dev/oauth/authorize/
+          tokenUrl: https://hypolimnial-wai-modularly.ngrok-free.dev/oauth/token/
+          refreshUrl: https://hypolimnial-wai-modularly.ngrok-free.dev/oauth/token/
+          scopes:
+            read: Read scope
+            write: Write scope
+            users: Access to manage users
+            groups: Access to manage groups
     tokenAuth:
       type: apiKey
       in: header
       name: Authorization
       description: Token-based authentication with required prefix "Token"
 servers:
-- url: http://localhost:8080/
-  description: Development server
+- url: https://hypolimnial-wai-modularly.ngrok-free.dev

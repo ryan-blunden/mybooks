@@ -34,7 +34,7 @@ def get_weather(city: str) -> str:
 # ------------------------
 agent = Agent(
     model="gpt-4o-mini",  # swap with preferred model
-    tools={"get_weather": get_weather},
+    tools=[get_weather],
     system_prompt="You are a helpful assistant. Use tools if needed.",
 )
 
@@ -48,7 +48,7 @@ st.title("🤖 Chat with MCP + OAuth + Agent Thoughts")
 # OAuth Workflow
 # ------------------------
 if "access_token" not in st.session_state:
-    params = st.experimental_get_query_params()
+    params = st.query_params
     code = params.get("code", [None])[0]
 
     if code:

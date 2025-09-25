@@ -47,6 +47,8 @@ DEBUG_TOOLBAR_ENABLED = bool(strtobool(os.getenv("DEBUG_TOOLBAR_ENABLED", "false
 
 ENV = os.getenv("ENV", "production")
 
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
+
 VERSION = os.getenv("VERSION", "dev")
 
 ADMINS = json.loads(os.getenv("ADMINS", "[]"))
@@ -268,7 +270,7 @@ LOGGING = {
     },
     "handlers": {
         "console": {
-            "level": "INFO" if DEBUG else "WARNING",
+            "level": LOG_LEVEL,
             "class": "logging.StreamHandler",
             "formatter": "simple",
         },
@@ -288,7 +290,7 @@ LOGGING = {
     "loggers": {
         "django": {
             "handlers": ["console", "file"],
-            "level": "INFO" if DEBUG else "WARNING",
+            "level": LOG_LEVEL,
             "propagate": True,
         },
         "django.request": {
@@ -298,11 +300,33 @@ LOGGING = {
         },
         "app": {
             "handlers": ["console", "file"],
-            "level": "DEBUG" if DEBUG else "INFO",
+            "level": LOG_LEVEL,
             "propagate": False,
         },
     },
 }
+
+# Add extra logging when in debug mode
+if DEBUG:
+    LOGGING["loggers"].update(
+        {
+            "oauth2_provider": {
+                "handlers": ["console", "file"],
+                "level": LOG_LEVEL,
+                "propagate": False,
+            },
+            "rest_framework": {
+                "handlers": ["console", "file"],
+                "level": LOG_LEVEL,
+                "propagate": False,
+            },
+            "django.contrib.auth": {
+                "handlers": ["console", "file"],
+                "level": LOG_LEVEL,
+                "propagate": False,
+            },
+        }
+    )
 
 
 ####################
@@ -402,6 +426,7 @@ OAUTH_DCR_SETTINGS = {
     # Grant types allowed for dynamic registration (RFC 7591 safe defaults)
     "ALLOWED_GRANT_TYPES": [
         "authorization_code",  # Safe for open registration
+        # "client_credentials",  # For server-to-server authentication
         "refresh_token",  # Safe - used for token renewal
     ],
     # Require HTTPS for redirect URIs in production (default: True in production)
@@ -418,8 +443,7 @@ SPECTACULAR_SETTINGS = {
     "OAS_VERSION": "3.1.0",
     "SERVERS": [
         {
-            "url": "http://localhost:8080/",
-            "description": "Development server",
+            "url": SITE_URL,
         },
     ],
     "SCHEMA_PATH_PREFIX": "/api/",
@@ -439,6 +463,17 @@ SPECTACULAR_SETTINGS = {
     ],
     "COMPONENT_SPLIT_REQUEST": True,
     "SORT_OPERATIONS": False,
+    "OAUTH2_FLOWS": ["authorizationCode"],
+    "OAUTH2_AUTHORIZATION_URL": f"{SITE_URL}/oauth/authorize/",
+    "OAUTH2_TOKEN_URL": f"{SITE_URL}/oauth/token/",
+    "OAUTH2_REFRESH_URL": f"{SITE_URL}/oauth/token/",
+    "OAUTH2_SCOPES": {
+        "read": "Read scope",
+        "write": "Write scope",
+        "users": "Access to manage users",
+        "groups": "Access to manage groups",
+    },
+    # "SECURITY": [{"oauth2": []}, {"tokenAuth": []}],
 }
 
 

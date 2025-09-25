@@ -2,7 +2,10 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from oauth2_provider.contrib.rest_framework import IsAuthenticatedOrTokenHasScope
 from rest_framework import viewsets
+from rest_framework.decorators import api_view, permission_classes
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
 
 from .models import Author, Book, Review, UserBook
 from .serializers import (
@@ -294,7 +297,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 @extend_schema_view(
     list=extend_schema(
-        operation_id="browse_all_available_books",
+        operation_id="search_available_books",
         summary="Browse and discover all books available in the system",
         description="Browse through the complete catalog of all books available in the system for discovery and exploration purposes. This endpoint returns all books that exist in the system regardless of whether they are in any user's personal collection. Each book entry includes basic information like title, author name, genre, tagline, and creation date. Use this tool when users want to discover new books to potentially add to their collection, search for specific titles or authors, or explore the complete book catalog. This is different from the user collection endpoints - this shows the master catalog of all available books, not user-specific collection data. The response does not include user-specific information like reading status or personal notes. Results are paginated and sorted alphabetically by title. Use the book_id from this response to add books to a user's collection via the user_books endpoints. Requires user authentication for access.",
         parameters=[
@@ -312,7 +315,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
                 enum=["title", "-title", "created_at", "-created_at", "author__name", "-author__name"],
             ),
         ],
-        tags=["books", "browse"],
+        tags=["books"],
         responses={
             200: OpenApiResponse(description="Paginated catalog of all books available for discovery and collection"),
         },
@@ -321,7 +324,7 @@ class ReviewViewSet(viewsets.ModelViewSet):
         operation_id="get_book_catalog_details",
         summary="Get comprehensive details about a specific book from the catalog",
         description="Retrieve complete information about a specific book from the system catalog using the book_id. This endpoint returns detailed book information including title, complete description, author biographical information, genre, tagline, cover image, and publication metadata. Use this tool when you need comprehensive information about a book for display, decision-making about adding it to a collection, or providing detailed book information to users. This shows the master book record with all available metadata but does not include user-specific information like reading status or personal reviews - for that information, use the user collection endpoints. The book_id can be obtained from the book browsing endpoint or from user collection responses. Returns comprehensive author details embedded within the book information. Returns 404 if the book_id doesn't exist in the system. Requires user authentication.",
-        tags=["books", "browse"],
+        tags=["books"],
         responses={
             200: OpenApiResponse(description="Complete book information with author details and metadata"),
             404: OpenApiResponse(description="Book not found in the system catalog"),
@@ -380,6 +383,15 @@ class BookViewSet(viewsets.ReadOnlyModelViewSet):
         operation_id="get_genre_details_and_statistics",
         summary="Get detailed information about a specific genre",
         description="Retrieve comprehensive information about a specific book genre using the genre identifier (slug). This endpoint returns detailed genre information including the human-readable name, complete description, total book count, and statistical metadata about books in this category. Use this tool when you need detailed information about a specific genre, such as when displaying genre-specific pages, providing genre descriptions to users, or showing detailed statistics about book categories. The genre_id should be the slug format identifier (e.g., 'science_fiction', 'fantasy', 'historical_fiction'). The response includes comprehensive metadata about the genre and its usage within the book collection system. Returns 404 if the genre_id doesn't correspond to a valid genre supported by the system. This does not return the actual books in the genre - for that, use the book browsing endpoints with genre filtering. Requires user authentication.",
+        parameters=[
+            OpenApiParameter(
+                name="id",
+                description="Genre identifier (slug format, e.g. 'science_fiction', 'fantasy')",
+                required=True,
+                type=str,
+                location=OpenApiParameter.PATH,
+            ),
+        ],
         tags=["genres", "metadata"],
         responses={
             200: OpenApiResponse(description="Detailed genre information with statistics and metadata"),
@@ -387,45 +399,86 @@ class BookViewSet(viewsets.ReadOnlyModelViewSet):
         },
     ),
 )
-class GenreViewSet(viewsets.ReadOnlyModelViewSet):
+class GenreViewSet(viewsets.ViewSet):
     """
-    Read-only ViewSet for browsing and discovering book genres.
+    ViewSet for browsing and discovering book genres.
 
     Provides genre discovery functionality with statistical information
     to help users understand available book categories and their usage.
+    No backing model - generates genre data dynamically from Book.GENRE_CHOICES.
     """
 
     serializer_class = GenreSerializer
     permission_classes = [IsAuthenticatedOrTokenHasScope]
     required_scopes = ["read"]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ["name", "description"]
-    ordering_fields = ["name", "book_count"]
-    ordering = ["name"]
+
+    def get_serializer(self, *args, **kwargs):
+        """Get serializer instance."""
+        kwargs["context"] = self.get_serializer_context()
+        return self.serializer_class(*args, **kwargs)
+
+    def get_serializer_context(self):
+        """Extra context provided to the serializer class."""
+        return {"request": self.request, "format": self.format_kwarg, "view": self}
 
     def get_queryset(self):
-        """Return genre data with book counts."""
+        """Return genre data with book counts for all available genres."""
 
-        # Create genre objects with book counts
+        # Create genre objects with book counts for ALL genre choices
         genres = []
         for genre_id, genre_name in Book.GENRE_CHOICES:
             book_count = Book.objects.filter(genre=genre_id).count()
 
-            # Add basic descriptions for some genres
+            # Add basic descriptions for genres where helpful
             descriptions = {
-                "fantasy": "Stories featuring magical elements, mythical creatures, and imaginary worlds",
-                "science_fiction": "Speculative fiction dealing with futuristic concepts and advanced technology",
-                "mystery": "Stories involving puzzles, crimes, or unexplained events to be solved",
-                "romance": "Stories focusing on romantic relationships and emotional connections",
-                "horror": "Stories designed to frighten, unsettle, or create suspense",
+                "art": "Visual arts, art history, and artistic techniques",
                 "biography": "Non-fiction accounts of real people's lives and experiences",
-                "history": "Non-fiction works about past events, cultures, and civilizations",
-                "science": "Educational works about scientific discoveries, theories, and research",
-                "philosophy": "Works exploring fundamental questions about existence, knowledge, and ethics",
+                "business": "Business strategy, entrepreneurship, and professional development",
+                "chick_lit": "Contemporary fiction targeting primarily female readership",
+                "childrens": "Books specifically written for children and young readers",
+                "christian": "Religious and spiritual content from Christian perspective",
+                "classics": "Timeless literature of enduring significance and quality",
+                "comics": "Sequential art storytelling in comic book format",
+                "contemporary": "Modern fiction reflecting current times and issues",
+                "cookbooks": "Recipes, cooking techniques, and culinary arts",
+                "crime": "Stories involving criminal activity and law enforcement",
+                "ebooks": "Digital books and electronic publications",
+                "fantasy": "Stories featuring magical elements, mythical creatures, and imaginary worlds",
                 "fiction": "Narrative literature featuring imaginary characters and events",
+                "gay_and_lesbian": "Literature exploring LGBTQ+ themes and experiences",
+                "graphic_novels": "Extended comic book narratives with literary depth",
+                "historical_fiction": "Fiction set in the past, recreating historical periods",
+                "history": "Non-fiction works about past events, cultures, and civilizations",
+                "horror": "Stories designed to frighten, unsettle, or create suspense",
+                "humor_and_comedy": "Light-hearted, funny, and comedic content",
+                "manga": "Japanese comic books and graphic novels",
+                "memoir": "Personal accounts and autobiographical narratives",
+                "music": "Books about musical history, theory, and musicians",
+                "mystery": "Stories involving puzzles, crimes, or unexplained events to be solved",
+                "nonfiction": "Factual writing on real subjects and events",
+                "paranormal": "Stories involving supernatural or unexplained phenomena",
+                "philosophy": "Works exploring fundamental questions about existence, knowledge, and ethics",
+                "poetry": "Literary works in verse expressing emotions and ideas",
+                "psychology": "Study of mind, behavior, and mental processes",
+                "religion": "Spiritual and religious texts and teachings",
+                "romance": "Stories focusing on romantic relationships and emotional connections",
+                "science": "Educational works about scientific discoveries, theories, and research",
+                "science_fiction": "Speculative fiction dealing with futuristic concepts and advanced technology",
+                "self_help": "Personal development and improvement guides",
+                "suspense": "Tension-filled stories with uncertain outcomes",
+                "spirituality": "Exploration of spiritual beliefs and practices",
+                "sports": "Athletic activities, sports history, and competition",
+                "thriller": "Fast-paced stories with constant danger and excitement",
+                "travel": "Travel guides, adventure stories, and cultural exploration",
+                "young_adult": "Literature targeted at teenage and young adult readers",
             }
 
-            genre_obj = {"id": genre_id, "name": genre_name, "book_count": book_count, "description": descriptions.get(genre_id, "")}
+            genre_obj = {
+                "id": genre_id,
+                "name": genre_name,
+                "book_count": book_count,
+                "description": descriptions.get(genre_id, f"Literature in the {genre_name.lower()} category"),
+            }
             genres.append(genre_obj)
 
         return genres
@@ -433,7 +486,6 @@ class GenreViewSet(viewsets.ReadOnlyModelViewSet):
     def list(self, request, *args, **kwargs):
         """List all genres with filtering and search capabilities."""
         from rest_framework import status as http_status
-        from rest_framework.response import Response
 
         queryset = self.get_queryset()
 
@@ -460,7 +512,6 @@ class GenreViewSet(viewsets.ReadOnlyModelViewSet):
         """Retrieve specific genre by ID."""
         from rest_framework import status as http_status
         from rest_framework.exceptions import NotFound
-        from rest_framework.response import Response
 
         queryset = self.get_queryset()
 
@@ -476,3 +527,39 @@ class GenreViewSet(viewsets.ReadOnlyModelViewSet):
 
         serializer = self.get_serializer(genre_obj)
         return Response(serializer.data, status=http_status.HTTP_200_OK)
+
+
+# AIDEV-NOTE: Debug view to inspect request headers - remove after debugging auth issues
+@api_view(["GET", "POST"])
+@permission_classes([AllowAny])  # Allow without auth for debugging
+def debug_headers(request):
+    """
+    Debug endpoint to see all request headers and auth info.
+    Accessible at /api/debug/headers/
+    """
+    headers = {}
+    for key, value in request.META.items():
+        if key.startswith("HTTP_"):
+            header_name = key[5:].replace("_", "-").title()
+            headers[header_name] = value
+        elif key in ["CONTENT_TYPE", "CONTENT_LENGTH"]:
+            headers[key.replace("_", "-").title()] = value
+
+    auth_info = {
+        "user": str(request.user),
+        "is_authenticated": request.user.is_authenticated,
+        "auth_object": str(request.auth) if request.auth else None,
+        "auth_type": type(request.auth).__name__ if request.auth else None,
+    }
+
+    return Response(
+        {
+            "method": request.method,
+            "path": request.path,
+            "headers": headers,
+            "auth_info": auth_info,
+            "remote_addr": request.META.get("REMOTE_ADDR"),
+            "user_agent": request.META.get("HTTP_USER_AGENT"),
+            "message": "This endpoint shows all headers and auth info for debugging",
+        }
+    )
