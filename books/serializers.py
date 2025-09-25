@@ -18,14 +18,13 @@ class AuthorSerializer(serializers.ModelSerializer):
         fields = ["id", "name", "image", "biography", "books_count", "created_at", "updated_at"]
         read_only_fields = ["created_at", "updated_at"]
         extra_kwargs = {
-            "name": {"help_text": "Author's full name (must be unique)", "example": "J.K. Rowling"},
+            "name": {"help_text": "Author's full name (must be unique)"},
             "image": {"help_text": "Profile photo of the author", "allow_null": True},
             "biography": {
                 "help_text": "Biographical information about the author",
-                "example": "British author best known for the Harry Potter fantasy series.",
                 "allow_blank": True,
             },
-            "id": {"help_text": "Unique identifier for the author", "example": 1},
+            "id": {"help_text": "Unique identifier for the author"},
         }
 
     def get_books_count(self, obj) -> int:
@@ -44,7 +43,6 @@ class BookSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(
         write_only=True,
         help_text="Author name for creating/getting author. If author doesn't exist, they will be created automatically.",
-        example="Stephen King",
     )
 
     class Meta:
@@ -52,20 +50,18 @@ class BookSerializer(serializers.ModelSerializer):
         fields = ["id", "title", "tagline", "description", "image", "genre", "author", "author_name", "created_at", "updated_at"]
         read_only_fields = ["created_at", "updated_at"]
         extra_kwargs = {
-            "id": {"help_text": "Unique identifier for the book", "example": 1},
-            "title": {"help_text": "The title of the book", "example": "The Shining"},
+            "id": {"help_text": "Unique identifier for the book"},
+            "title": {"help_text": "The title of the book"},
             "tagline": {
                 "help_text": "Brief description or tagline for the book",
-                "example": "A chilling tale of horror and madness",
                 "allow_blank": True,
             },
             "description": {
                 "help_text": "Detailed description of the book's plot and themes",
-                "example": "Jack Torrance's new job at the Overlook Hotel is the perfect chance for a fresh start...",
                 "allow_blank": True,
             },
             "image": {"help_text": "Book cover image", "allow_null": True},
-            "genre": {"help_text": "Book genre category", "example": "horror"},
+            "genre": {"help_text": "Book genre category"},
         }
 
     def create(self, validated_data):
@@ -92,34 +88,16 @@ class UserBookSerializer(serializers.ModelSerializer):
     """
 
     book = BookSerializer(read_only=True, help_text="Complete book information including author details")
-    book_id = serializers.IntegerField(write_only=True, required=False, help_text="ID of existing book to add to collection", example=1)
+    book_id = serializers.IntegerField(write_only=True, required=False, help_text="ID of existing book to add to collection")
 
     # Support creating books directly within UserBook
-    title = serializers.CharField(write_only=True, required=False, help_text="Title for new book (used when creating book inline)", example="1984")
-    author_name = serializers.CharField(
-        write_only=True, required=False, help_text="Author name for new book (used when creating book inline)", example="George Orwell"
-    )
+    title = serializers.CharField(write_only=True, required=False, help_text="Title for new book (used when creating book inline)")
+    author_name = serializers.CharField(write_only=True, required=False, help_text="Author name for new book (used when creating book inline)")
     genre = serializers.ChoiceField(
-        choices=Book.GENRE_CHOICES,
-        write_only=True,
-        required=False,
-        help_text="Genre for new book (used when creating book inline)",
-        example="science_fiction",
+        choices=Book.GENRE_CHOICES, write_only=True, required=False, help_text="Genre for new book (used when creating book inline)"
     )
-    tagline = serializers.CharField(
-        write_only=True,
-        required=False,
-        allow_blank=True,
-        help_text="Brief tagline for new book (optional)",
-        example="A dystopian social science fiction novel",
-    )
-    description = serializers.CharField(
-        write_only=True,
-        required=False,
-        allow_blank=True,
-        help_text="Detailed description for new book (optional)",
-        example="A novel about totalitarian control and surveillance...",
-    )
+    tagline = serializers.CharField(write_only=True, required=False, allow_blank=True, help_text="Brief tagline for new book (optional)")
+    description = serializers.CharField(write_only=True, required=False, allow_blank=True, help_text="Detailed description for new book (optional)")
 
     class Meta:
         model = UserBook
@@ -140,8 +118,8 @@ class UserBookSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["date_added", "date_started", "date_finished"]
         extra_kwargs = {
-            "id": {"help_text": "Unique identifier for this user-book relationship", "example": 1},
-            "reading_status": {"help_text": "Current reading status for this book", "example": "reading"},
+            "id": {"help_text": "Unique identifier for this user-book relationship"},
+            "reading_status": {"help_text": "Current reading status for this book"},
             "date_added": {"help_text": "When this book was added to the user's collection", "format": "date-time"},
             "date_started": {
                 "help_text": "When the user started reading this book (auto-set when status changes to 'reading')",
@@ -153,6 +131,12 @@ class UserBookSerializer(serializers.ModelSerializer):
                 "format": "date-time",
                 "allow_null": True,
             },
+            "book_id": {"help_text": "ID of existing book to add to collection"},
+            "title": {"help_text": "Title for new book (used when creating book inline)"},
+            "author_name": {"help_text": "Author name for new book (used when creating book inline)"},
+            "genre": {"help_text": "Genre for new book (used when creating book inline)"},
+            "tagline": {"help_text": "Brief tagline for new book (optional)"},
+            "description": {"help_text": "Detailed description for new book (optional)"},
         }
 
     def validate(self, data):
@@ -227,7 +211,7 @@ class ReviewSerializer(serializers.ModelSerializer):
     """
 
     book = BookSerializer(read_only=True, help_text="Complete book information for the reviewed book")
-    book_id = serializers.IntegerField(write_only=True, help_text="ID of the book being reviewed", example=1)
+    book_id = serializers.IntegerField(write_only=True, help_text="ID of the book being reviewed")
     user = serializers.StringRelatedField(read_only=True, help_text="Username of the reviewer")
 
     class Meta:
@@ -235,11 +219,10 @@ class ReviewSerializer(serializers.ModelSerializer):
         fields = ["id", "book", "book_id", "user", "rating", "text", "created_at", "updated_at"]
         read_only_fields = ["created_at", "updated_at"]
         extra_kwargs = {
-            "id": {"help_text": "Unique identifier for this review", "example": 1},
-            "rating": {"help_text": "Star rating from 1 to 5 stars", "example": 4, "min_value": 1, "max_value": 5},
+            "id": {"help_text": "Unique identifier for this review"},
+            "rating": {"help_text": "Star rating from 1 to 5 stars", "min_value": 1, "max_value": 5},
             "text": {
                 "help_text": "Written review content (optional)",
-                "example": "An incredible book that kept me reading late into the night. Highly recommended!",
                 "allow_blank": True,
             },
             "created_at": {"help_text": "When this review was created", "format": "date-time"},
@@ -306,3 +289,19 @@ class UserBookDetailSerializer(UserBookSerializer):
             return ReviewSerializer(review, context=self.context).data
         except Review.DoesNotExist:
             return None
+
+
+class GenreSerializer(serializers.Serializer):
+    """Serializer for Genre information with book counts and metadata.
+
+    Provides comprehensive information about book genres including the number
+    of books available in each genre category.
+    """
+
+    id = serializers.CharField(help_text="Unique genre identifier (slug format)")
+    name = serializers.CharField(help_text="Human-readable genre name")
+    book_count = serializers.IntegerField(help_text="Total number of books in this genre")
+    description = serializers.CharField(help_text="Optional description of the genre", allow_blank=True)
+
+    class Meta:
+        fields = ["id", "name", "book_count", "description"]

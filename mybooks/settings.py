@@ -23,7 +23,7 @@ from django_components import ComponentsSettings
 from dotenv import load_dotenv
 from sentry_sdk.integrations.django import DjangoIntegration
 
-from mybooks.utils import get_code_verifier, strtobool
+from mybooks.utils import strtobool
 
 logger = logging.getLogger(__name__)
 
@@ -378,10 +378,10 @@ HEALTH_CHECK = {
 
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework.authentication.TokenAuthentication",
         "oauth2_provider.contrib.rest_framework.OAuth2Authentication",
+        "rest_framework.authentication.TokenAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated", "oauth2_provider.contrib.rest_framework.permissions.TokenHasScope"),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_FILTER_BACKENDS": (
         "django_filters.rest_framework.DjangoFilterBackend",
@@ -395,7 +395,7 @@ REST_FRAMEWORK = {
 OAUTH2_PROVIDER = {
     # this is the list of available scopes
     "ALLOWED_SCHEMES": ["http", "https"] if DEBUG else ["https"],
-    "SCOPES": {"read": "Read scope", "write": "Write scope", "groups": "Access to your groups"},
+    "SCOPES": {"read": "Read scope", "write": "Write scope", "users": "Access to manage users", "groups": "Access to manage groups"},
 }
 
 OAUTH_DCR_SETTINGS = {
@@ -415,7 +415,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "A comprehensive API for managing personal book collections with reading status tracking, reviews, and recommendations.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    "OAS_VERSION": "3.0.3",  # Use 3.0.3 for better compatibility
+    "OAS_VERSION": "3.1.0",
     "SERVERS": [
         {
             "url": "http://localhost:8080/",

@@ -1,4 +1,4 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
   title: Book Collection Management API
   version: 1.0.0
@@ -6,37 +6,10 @@ info:
     status tracking, reviews, and recommendations.
 paths:
   /api/users/:
-    post:
-      operationId: users_create
-      description: Create a new user account
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-        required: true
-      security:
-      - tokenAuth: []
-      - oauth2:
-        - write
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
     get:
       operationId: users_list
       description: List all users with filtering and search capabilities
+      summary: List all users
       parameters:
       - in: query
         name: date_joined__gte
@@ -95,16 +68,39 @@ paths:
       tags:
       - users
       security:
-      - tokenAuth: []
       - oauth2:
-        - read
+        - users
+      - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedUserList'
-          description: ''
+          description: Paginated list of system users
+    post:
+      operationId: users_create
+      description: Create a new user account
+      summary: Create user
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - oauth2:
+        - users
+      - tokenAuth: []
+      responses:
+        '201':
+          description: User successfully created
+        '400':
+          description: Validation error
   /api/users/recent/:
     get:
       operationId: users_recent_retrieve
@@ -112,16 +108,15 @@ paths:
       tags:
       - users
       security:
-      - tokenAuth: []
       - oauth2:
-        - read
+        - users
+      - tokenAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
                 type: object
-                description: Recently joined users
                 properties:
                   count:
                     type: integer
@@ -131,80 +126,12 @@ paths:
                     items:
                       $ref: '#/components/schemas/User'
                     description: List of recently joined users
-          description: ''
-  /api/users/stats/:
-    get:
-      operationId: users_stats_retrieve
-      description: Get comprehensive user statistics including counts by status and
-        permissions
-      tags:
-      - users
-      security:
-      - tokenAuth: []
-      - oauth2:
-        - read
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                description: User statistics across the system
-                properties:
-                  total_users:
-                    type: integer
-                    description: Total number of users
-                  active_users:
-                    type: integer
-                    description: Number of active users
-                  inactive_users:
-                    type: integer
-                    description: Number of inactive users
-                  staff_users:
-                    type: integer
-                    description: Number of staff users
-                  superusers:
-                    type: integer
-                    description: Number of superusers
-          description: ''
+          description: Recently joined users
   /api/users/{id}/:
-    patch:
-      operationId: users_partial_update
-      description: Partially update user information
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user.
-        required: true
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-      security:
-      - tokenAuth: []
-      - oauth2:
-        - write
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
     put:
       operationId: users_update
       description: Update user information
+      summary: Update user
       parameters:
       - in: path
         name: id
@@ -227,19 +154,20 @@ paths:
               $ref: '#/components/schemas/UserRequest'
         required: true
       security:
-      - tokenAuth: []
       - oauth2:
-        - write
+        - users
+      - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/User'
-          description: ''
-    get:
-      operationId: users_retrieve
-      description: Get detailed information about a specific user
+          description: User successfully updated
+        '400':
+          description: Validation error
+        '404':
+          description: User not found
+    patch:
+      operationId: users_partial_update
+      description: Partially update user information
+      summary: Partially update user
       parameters:
       - in: path
         name: id
@@ -249,20 +177,32 @@ paths:
         required: true
       tags:
       - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
       security:
-      - tokenAuth: []
       - oauth2:
-        - read
+        - users
+      - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserDetail'
-          description: ''
+          description: User successfully updated
+        '400':
+          description: Validation error
+        '404':
+          description: User not found
     delete:
       operationId: users_destroy
       description: Delete a user account
+      summary: Delete user
       parameters:
       - in: path
         name: id
@@ -273,16 +213,41 @@ paths:
       tags:
       - users
       security:
-      - tokenAuth: []
       - oauth2:
-        - write
+        - users
+      - tokenAuth: []
       responses:
         '204':
-          description: No response body
+          description: User successfully deleted
+        '404':
+          description: User not found
+    get:
+      operationId: users_retrieve
+      description: Get detailed information about a specific user
+      summary: Get user details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - oauth2:
+        - users
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Detailed user information
+        '404':
+          description: User not found
   /api/groups/:
     get:
       operationId: groups_list
       description: List all groups with filtering and search capabilities
+      summary: List all groups
       parameters:
       - in: query
         name: name
@@ -309,37 +274,17 @@ paths:
       tags:
       - groups
       security:
-      - tokenAuth: []
       - oauth2:
         - groups
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedGroupList'
-          description: ''
-  /api/groups/stats/:
-    get:
-      operationId: groups_stats_retrieve
-      description: Get group statistics.
-      tags:
-      - groups
-      security:
       - tokenAuth: []
-      - oauth2:
-        - groups
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Group'
-          description: ''
+          description: Paginated list of user groups
   /api/groups/{id}/:
     get:
       operationId: groups_retrieve
       description: Get detailed information about a specific group
+      summary: Get group details
       parameters:
       - in: path
         name: id
@@ -350,16 +295,14 @@ paths:
       tags:
       - groups
       security:
-      - tokenAuth: []
       - oauth2:
         - groups
+      - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Group'
-          description: ''
+          description: Detailed group information with user count
+        '404':
+          description: Group not found
   /api/groups/{id}/users/:
     get:
       operationId: groups_users_retrieve
@@ -374,16 +317,15 @@ paths:
       tags:
       - groups
       security:
-      - tokenAuth: []
       - oauth2:
         - groups
+      - tokenAuth: []
       responses:
         '200':
           content:
             application/json:
               schema:
                 type: object
-                description: Users in the specified group
                 properties:
                   group:
                     type: string
@@ -396,163 +338,42 @@ paths:
                     items:
                       $ref: '#/components/schemas/User'
                     description: List of users in this group
-          description: ''
+          description: Users in the specified group
   /api/books/:
-    post:
-      operationId: books_create
-      description: Add a book to user's collection
-      tags:
-      - books
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-      security:
-      - tokenAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserBook'
-          description: ''
     get:
-      operationId: books_list
-      description: List books in user's personal collection with filtering
+      operationId: list_user_personal_book_collection
+      description: Retrieve all books in the authenticated user's personal collection
+        with reading status tracking and date information. This endpoint returns only
+        books that the authenticated user has explicitly added to their personal library,
+        along with their reading status (want_to_read, reading, finished, dropped),
+        dates when books were added/started/finished, and associated book details.
+        Use this tool when you need to see what books a user has in their collection,
+        check reading progress, or manage their personal library. The response includes
+        book metadata (title, author, genre) combined with user-specific data (reading
+        status, dates). This is different from browsing all available books - this
+        shows only books the user has chosen to track. Results are paginated and sorted
+        by date_added (most recent first). Requires user authentication.
+      summary: List authenticated user's personal book collection
       parameters:
       - in: query
-        name: book__author__name__icontains
-        schema:
-          type: string
-      - in: query
-        name: book__genre
+        name: ordering
         schema:
           type: string
           enum:
-          - art
-          - biography
-          - business
-          - chick_lit
-          - childrens
-          - christian
-          - classics
-          - comics
-          - contemporary
-          - cookbooks
-          - crime
-          - ebooks
-          - fantasy
-          - fiction
-          - gay_and_lesbian
-          - graphic_novels
-          - historical_fiction
-          - history
-          - horror
-          - humor_and_comedy
-          - manga
-          - memoir
-          - music
-          - mystery
-          - nonfiction
-          - paranormal
-          - philosophy
-          - poetry
-          - psychology
-          - religion
-          - romance
-          - science
-          - science_fiction
-          - self_help
-          - spirituality
-          - sports
-          - suspense
-          - thriller
-          - travel
-          - young_adult
-        description: |-
-          * `art` - Art
-          * `biography` - Biography
-          * `business` - Business
-          * `chick_lit` - Chick Lit
-          * `childrens` - Children's
-          * `christian` - Christian
-          * `classics` - Classics
-          * `comics` - Comics
-          * `contemporary` - Contemporary
-          * `cookbooks` - Cookbooks
-          * `crime` - Crime
-          * `ebooks` - Ebooks
-          * `fantasy` - Fantasy
-          * `fiction` - Fiction
-          * `gay_and_lesbian` - Gay and Lesbian
-          * `graphic_novels` - Graphic Novels
-          * `historical_fiction` - Historical Fiction
-          * `history` - History
-          * `horror` - Horror
-          * `humor_and_comedy` - Humor and Comedy
-          * `manga` - Manga
-          * `memoir` - Memoir
-          * `music` - Music
-          * `mystery` - Mystery
-          * `nonfiction` - Nonfiction
-          * `paranormal` - Paranormal
-          * `philosophy` - Philosophy
-          * `poetry` - Poetry
-          * `psychology` - Psychology
-          * `religion` - Religion
-          * `romance` - Romance
-          * `science` - Science
-          * `science_fiction` - Science Fiction
-          * `self_help` - Self Help
-          * `suspense` - Suspense
-          * `spirituality` - Spirituality
-          * `sports` - Sports
-          * `thriller` - Thriller
-          * `travel` - Travel
-          * `young_adult` - Young Adult
-      - in: query
-        name: date_added__gte
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: date_added__lte
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: date_finished__gte
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: date_finished__lte
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: date_started__gte
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: date_started__lte
-        schema:
-          type: string
-          format: date-time
-      - name: ordering
-        required: false
-        in: query
-        description: Which field to use when ordering the results.
-        schema:
-          type: string
+          - -book__title
+          - -date_added
+          - -date_finished
+          - -date_started
+          - -reading_status
+          - book__title
+          - date_added
+          - date_finished
+          - date_started
+          - reading_status
+        description: 'Sort the collection by specified field. Available options: ''date_added''
+          (newest first), ''book__title'' (alphabetical), ''reading_status'', ''date_started'',
+          ''date_finished'', or negative versions for reverse order. Default is newest
+          added first (-date_added).'
       - name: page
         required: false
         in: query
@@ -573,128 +394,82 @@ paths:
           * `reading` - Reading
           * `finished` - Finished
           * `dropped` - Dropped
-      - name: search
-        required: false
-        in: query
-        description: A search term.
+      - in: query
+        name: search
         schema:
           type: string
+        description: Search within user's collection by book title, author name, or
+          reading status. Performs case-insensitive text search to help find specific
+          books in the user's personal library.
       tags:
-      - books
+      - user-books
+      - collection
       security:
+      - oauth2:
+        - write
       - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedUserBookList'
-          description: ''
-  /api/books/by_status/:
-    get:
-      operationId: books_by_status_retrieve
-      description: Get books grouped by reading status (want_to_read, reading, read)
+          description: Paginated list of books in user's personal collection with
+            reading status
+    post:
+      operationId: add_book_to_user_collection
+      description: Add a book to the authenticated user's personal collection with
+        initial reading status. You can either reference an existing book by its book_id
+        or create a completely new book entry if it doesn't exist in the system yet.
+        When adding an existing book, provide the book_id and desired reading_status
+        (defaults to 'want_to_read'). When creating a new book, provide complete book
+        details including title, author information, and genre. Use this tool when
+        a user wants to add a book to their personal library for tracking. The system
+        prevents duplicate entries - each user can only have one instance of each
+        book in their collection. The response includes the created UserBook relationship
+        with book details and initial status. This creates a tracking relationship
+        but doesn't modify the original book record if using an existing book. Requires
+        user authentication.
+      summary: Add a book to user's personal collection
       tags:
-      - books
+      - user-books
+      - collection
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
       security:
+      - oauth2:
+        - write
       - tokenAuth: []
       responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                description: Books grouped by reading status
-                properties:
-                  want_to_read:
-                    type: object
-                    properties:
-                      count:
-                        type: integer
-                      books:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/UserBook'
-                  reading:
-                    type: object
-                    properties:
-                      count:
-                        type: integer
-                      books:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/UserBook'
-                  read:
-                    type: object
-                    properties:
-                      count:
-                        type: integer
-                      books:
-                        type: array
-                        items:
-                          $ref: '#/components/schemas/UserBook'
-          description: ''
-  /api/books/recommendations/:
-    get:
-      operationId: books_recommendations_retrieve
-      description: Get book recommendations based on user's reading history and preferences
-      tags:
-      - books
-      security:
-      - tokenAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                description: Book recommendations based on user's reading history
-                properties:
-                  count:
-                    type: integer
-                    description: Number of recommendations
-                  recommendations:
-                    type: array
-                    items:
-                      $ref: '#/components/schemas/Book'
-                    description: Recommended books
-          description: ''
+        '201':
+          description: Book successfully added to user's collection with initial reading
+            status
+        '400':
+          description: Validation error, missing required fields, or book already
+            exists in user's collection
   /api/books/{id}/:
-    patch:
-      operationId: books_partial_update
-      description: Partially update book information in collection
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user book.
-        required: true
-      tags:
-      - books
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedUserBookRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedUserBookRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedUserBookRequest'
-      security:
-      - tokenAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserBook'
-          description: ''
     put:
-      operationId: books_update
-      description: Update reading status and notes for a book
+      operationId: update_book_reading_status_in_collection
+      description: Update the reading status and tracking information for a book in
+        the authenticated user's collection using the userbook_id. This endpoint allows
+        changing the reading_status (want_to_read, reading, finished, dropped) and
+        automatically manages related date fields based on status transitions. When
+        status changes to 'reading', date_started is set to current time. When status
+        changes to 'finished', date_finished is set to current time. Use this tool
+        when a user progresses through reading a book or changes their intent for
+        a book in their collection. The userbook_id identifies the specific user-book
+        relationship to update. You cannot change which book this relationship points
+        to - only the user's interaction with that book. The system validates status
+        transitions and ensures dates remain consistent. Requires the complete object
+        data (PUT method). PATCH method is not supported due to technical issues -
+        use PUT for all updates. Requires user authentication and ownership of the
+        userbook relationship.
+      summary: Update reading status and tracking for book in user's collection
       parameters:
       - in: path
         name: id
@@ -703,7 +478,8 @@ paths:
         description: A unique integer value identifying this user book.
         required: true
       tags:
-      - books
+      - user-books
+      - collection
       requestBody:
         content:
           application/json:
@@ -716,17 +492,32 @@ paths:
             schema:
               $ref: '#/components/schemas/UserBookRequest'
       security:
+      - oauth2:
+        - write
       - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserBook'
-          description: ''
+          description: Book reading status successfully updated with automatic date
+            management
+        '400':
+          description: Validation error or invalid status transition
+        '404':
+          description: UserBook relationship not found in authenticated user's collection
     get:
-      operationId: books_retrieve
-      description: Get detailed information about a book in user's collection
+      operationId: get_book_from_user_collection
+      description: Retrieve comprehensive information about a specific book in the
+        authenticated user's personal collection using the userbook_id (not the book_id).
+        This endpoint returns the user's relationship to the book including current
+        reading status, dates when the book was added/started/finished, combined with
+        complete book details (title, author, description, genre) and any review the
+        user has written for this book. Use this tool when you need detailed information
+        about how a specific user relates to a specific book in their collection.
+        The userbook_id is the unique identifier for the user-book relationship, which
+        you can get from the list endpoint. This is different from the general book
+        browsing endpoint - this shows user-specific tracking information. Returns
+        404 if the userbook_id doesn't exist or doesn't belong to the authenticated
+        user. Requires user authentication.
+      summary: Get detailed information about a book in user's collection
       parameters:
       - in: path
         name: id
@@ -735,19 +526,33 @@ paths:
         description: A unique integer value identifying this user book.
         required: true
       tags:
-      - books
+      - user-books
+      - collection
       security:
+      - oauth2:
+        - write
       - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserBookDetail'
-          description: ''
+          description: Complete book details with user's reading status, dates, and
+            review if available
+        '404':
+          description: UserBook relationship not found in authenticated user's collection
     delete:
-      operationId: books_destroy
-      description: Remove a book from user's collection
+      operationId: remove_book_from_user_collection
+      description: Remove a book from the authenticated user's personal collection
+        using the userbook_id. This operation deletes the user-book relationship and
+        all associated tracking data (reading status, dates) but does NOT delete the
+        book itself from the system - other users can still have this book in their
+        collections and the book remains available for browsing and future additions.
+        Use this tool when a user wants to completely remove a book from their personal
+        library and stop tracking it. This action also removes any review the user
+        has written for this book, as reviews are tied to the user-book relationship.
+        The userbook_id identifies the specific relationship to delete. This is irreversible
+        - if the user wants the book back in their collection, they'll need to add
+        it again with a fresh tracking relationship. Requires user authentication
+        and ownership of the userbook relationship.
+      summary: Remove book from user's personal collection
       parameters:
       - in: path
         name: id
@@ -756,54 +561,83 @@ paths:
         description: A unique integer value identifying this user book.
         required: true
       tags:
-      - books
+      - user-books
+      - collection
       security:
+      - oauth2:
+        - write
       - tokenAuth: []
       responses:
         '204':
-          description: No response body
+          description: Book and all tracking data successfully removed from user's
+            collection
+        '404':
+          description: UserBook relationship not found in authenticated user's collection
   /api/authors/:
     get:
-      operationId: authors_list
-      description: List all authors with filtering and search capabilities
+      operationId: list_authors_for_discovery
+      description: Retrieve a paginated list of all authors in the book system for
+        discovery and exploration purposes. This endpoint returns basic author information
+        including their name, biography snippet, and total book count. Use this tool
+        when you need to help users discover authors or browse the author catalog.
+        Each author entry includes a book count to help users understand the author's
+        presence in the system. The response is paginated and includes authors sorted
+        alphabetically by name. This is a read-only endpoint that requires user authentication
+        but does not filter by user's personal collection - it shows all authors in
+        the system regardless of whether the user has their books in their collection.
+      summary: List all authors for book discovery
       parameters:
       - in: query
-        name: name
+        name: ordering
         schema:
           type: string
-      - name: ordering
-        required: false
-        in: query
-        description: Which field to use when ordering the results.
-        schema:
-          type: string
+          enum:
+          - -created_at
+          - -name
+          - created_at
+          - name
+        description: 'Sort the author list by specified field. Available options:
+          ''name'' (alphabetical), ''created_at'' (newest first), ''-name'' (reverse
+          alphabetical), ''-created_at'' (oldest first). Default is alphabetical by
+          name.'
       - name: page
         required: false
         in: query
         description: A page number within the paginated result set.
         schema:
           type: integer
-      - name: search
-        required: false
-        in: query
-        description: A search term.
+      - in: query
+        name: search
         schema:
           type: string
+        description: Search authors by name or biography content. Performs case-insensitive
+          text search across author names and biographical information. Use this to
+          find specific authors or authors with particular expertise mentioned in
+          their biography.
       tags:
       - authors
       security:
+      - oauth2:
+        - read
       - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedAuthorList'
-          description: ''
+          description: A paginated list of authors with basic info and book counts
   /api/authors/{id}/:
     get:
-      operationId: authors_retrieve
-      description: Get detailed information about a specific author including books
+      operationId: get_author_complete_details
+      description: Retrieve comprehensive information about a specific author by their
+        unique author_id, including their complete biography and full list of books
+        they've written. This endpoint returns detailed author information along with
+        all books by this author available in the system. Use this tool when you need
+        complete information about a specific author, such as when a user wants to
+        explore all works by a particular author or needs detailed biographical information.
+        The response includes the author's full biography, profile image if available,
+        and a complete list of their books with titles, genres, and publication metadata.
+        This does not show user-specific information like reading status - for that,
+        use the user collection endpoints. Requires authentication and returns a 404
+        error if the author_id doesn't exist.
+      summary: Get complete author information and book list
       parameters:
       - in: path
         name: id
@@ -814,151 +648,47 @@ paths:
       tags:
       - authors
       security:
+      - oauth2:
+        - read
       - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AuthorDetail'
-          description: ''
+          description: Complete author details with full book catalog
+        '404':
+          description: Author not found for the provided author_id
   /api/reviews/:
-    post:
-      operationId: reviews_create
-      description: Create a new book review
-      tags:
-      - reviews
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReviewRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ReviewRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ReviewRequest'
-        required: true
-      security:
-      - tokenAuth: []
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Review'
-          description: ''
     get:
-      operationId: reviews_list
-      description: List user's book reviews with filtering and search
+      operationId: list_user_book_reviews
+      description: Retrieve all book reviews that the authenticated user has written,
+        including ratings, review text, and associated book information. This endpoint
+        returns only reviews created by the authenticated user, not reviews by other
+        users or reviews for books not in the user's collection. Each review includes
+        the star rating (1-5), review text content, creation/update timestamps, and
+        complete details about the book being reviewed (title, author, genre). Use
+        this tool when you need to see all reviews a user has written, for displaying
+        their review history, or for managing their review content. Reviews are automatically
+        linked to books in the user's collection - users can only review books they
+        have added to their personal library. Results are paginated and sorted by
+        creation date (most recent first). Requires user authentication.
+      summary: List all reviews written by authenticated user
       parameters:
       - in: query
-        name: book__author__name__icontains
-        schema:
-          type: string
-      - in: query
-        name: book__genre
+        name: ordering
         schema:
           type: string
           enum:
-          - art
-          - biography
-          - business
-          - chick_lit
-          - childrens
-          - christian
-          - classics
-          - comics
-          - contemporary
-          - cookbooks
-          - crime
-          - ebooks
-          - fantasy
-          - fiction
-          - gay_and_lesbian
-          - graphic_novels
-          - historical_fiction
-          - history
-          - horror
-          - humor_and_comedy
-          - manga
-          - memoir
-          - music
-          - mystery
-          - nonfiction
-          - paranormal
-          - philosophy
-          - poetry
-          - psychology
-          - religion
-          - romance
-          - science
-          - science_fiction
-          - self_help
-          - spirituality
-          - sports
-          - suspense
-          - thriller
-          - travel
-          - young_adult
-        description: |-
-          * `art` - Art
-          * `biography` - Biography
-          * `business` - Business
-          * `chick_lit` - Chick Lit
-          * `childrens` - Children's
-          * `christian` - Christian
-          * `classics` - Classics
-          * `comics` - Comics
-          * `contemporary` - Contemporary
-          * `cookbooks` - Cookbooks
-          * `crime` - Crime
-          * `ebooks` - Ebooks
-          * `fantasy` - Fantasy
-          * `fiction` - Fiction
-          * `gay_and_lesbian` - Gay and Lesbian
-          * `graphic_novels` - Graphic Novels
-          * `historical_fiction` - Historical Fiction
-          * `history` - History
-          * `horror` - Horror
-          * `humor_and_comedy` - Humor and Comedy
-          * `manga` - Manga
-          * `memoir` - Memoir
-          * `music` - Music
-          * `mystery` - Mystery
-          * `nonfiction` - Nonfiction
-          * `paranormal` - Paranormal
-          * `philosophy` - Philosophy
-          * `poetry` - Poetry
-          * `psychology` - Psychology
-          * `religion` - Religion
-          * `romance` - Romance
-          * `science` - Science
-          * `science_fiction` - Science Fiction
-          * `self_help` - Self Help
-          * `suspense` - Suspense
-          * `spirituality` - Spirituality
-          * `sports` - Sports
-          * `thriller` - Thriller
-          * `travel` - Travel
-          * `young_adult` - Young Adult
-      - in: query
-        name: created_at__gte
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: created_at__lte
-        schema:
-          type: string
-          format: date-time
-      - name: ordering
-        required: false
-        in: query
-        description: Which field to use when ordering the results.
-        schema:
-          type: string
+          - -book__title
+          - -created_at
+          - -rating
+          - -updated_at
+          - book__title
+          - created_at
+          - rating
+          - updated_at
+        description: 'Sort reviews by specified field. Available options: ''created_at''
+          (newest first), ''updated_at'', ''rating'' (highest first), ''book__title''
+          (alphabetical), or negative versions for reverse order. Default is newest
+          created first (-created_at).'
       - name: page
         required: false
         in: query
@@ -970,105 +700,77 @@ paths:
         schema:
           type: integer
       - in: query
-        name: rating__gte
-        schema:
-          type: integer
-      - in: query
-        name: rating__lte
-        schema:
-          type: integer
-      - name: search
-        required: false
-        in: query
-        description: A search term.
+        name: search
         schema:
           type: string
+        description: Search within user's reviews by book title, author name, or review
+          text content. Performs case-insensitive text search to help find specific
+          reviews in the user's review history.
       tags:
       - reviews
       security:
+      - oauth2:
+        - write
       - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedReviewList'
-          description: ''
-  /api/reviews/stats/:
-    get:
-      operationId: reviews_stats_retrieve
-      description: Get comprehensive statistics about user's reviews including totals,
-        averages, and rating distribution
+          description: Paginated list of all reviews written by the authenticated
+            user
+    post:
+      operationId: create_book_review
+      description: Create a new review for a book that exists in the authenticated
+        user's personal collection. The review must include a star rating (integer
+        from 1-5) and can optionally include review text content. Users can only write
+        one review per book - attempting to create a duplicate review will result
+        in a validation error. The book being reviewed must already exist in the user's
+        collection (added via the user_books endpoints). Use this tool when a user
+        wants to rate and review a book they have read or are reading. The review
+        becomes part of the book's overall review collection and is associated with
+        both the user and the specific book. Reviews can be edited later using the
+        update endpoints. The system validates that the rating is within the 1-5 range
+        and that the user hasn't already reviewed this book. Requires user authentication
+        and the book must be in the user's collection.
+      summary: Write a new review for a book in user's collection
       tags:
       - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+        required: true
       security:
+      - oauth2:
+        - write
       - tokenAuth: []
       responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                type: object
-                description: User's review statistics
-                properties:
-                  total_reviews:
-                    type: integer
-                    description: Total number of reviews
-                  average_rating:
-                    type: number
-                    format: float
-                    description: Average rating across all reviews
-                  rating_distribution:
-                    type: object
-                    description: Distribution of ratings (1-5 stars)
-                    properties:
-                      '1':
-                        type: integer
-                      '2':
-                        type: integer
-                      '3':
-                        type: integer
-                      '4':
-                        type: integer
-                      '5':
-                        type: integer
-          description: ''
+        '201':
+          description: Review successfully created with rating and optional text
+        '400':
+          description: Validation error, invalid rating, or user has already reviewed
+            this book
   /api/reviews/{id}/:
-    patch:
-      operationId: reviews_partial_update
-      description: Partially update a book review
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this review.
-        required: true
-      tags:
-      - reviews
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedReviewRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedReviewRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedReviewRequest'
-      security:
-      - tokenAuth: []
-      responses:
-        '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Review'
-          description: ''
     put:
-      operationId: reviews_update
-      description: Update a book review
+      operationId: update_user_book_review
+      description: Update an existing review written by the authenticated user using
+        the review_id. This endpoint allows modification of the star rating (1-5)
+        and review text content, but the associated book cannot be changed once a
+        review is created - to review a different book, create a new review. Use this
+        tool when a user wants to change their opinion about a book, update their
+        rating, or revise their review text. The update automatically sets the updated_at
+        timestamp to the current time. Requires the complete review data (PUT method)
+        including both rating and text fields. For partial updates (changing only
+        rating or only text), use the partial_update endpoint instead. The review_id
+        must correspond to a review owned by the authenticated user. Validates that
+        the new rating is within the 1-5 range. Requires user authentication and ownership
+        of the review.
+      summary: Update an existing book review with complete data
       parameters:
       - in: path
         name: id
@@ -1091,17 +793,30 @@ paths:
               $ref: '#/components/schemas/ReviewRequest'
         required: true
       security:
+      - oauth2:
+        - write
       - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Review'
-          description: ''
-    get:
-      operationId: reviews_retrieve
-      description: Get detailed information about a specific review
+          description: Review successfully updated with new rating and/or text content
+        '400':
+          description: Validation error or invalid rating value
+        '404':
+          description: Review not found or not owned by authenticated user
+    patch:
+      operationId: partially_update_user_review
+      description: Partially update an existing review by modifying only the fields
+        you specify (typically rating or text) without requiring the complete review
+        data. This endpoint allows updating just the star rating, just the review
+        text, or both, without needing to provide all fields. The associated book
+        cannot be changed. Use this tool when you want to make targeted changes to
+        a review, such as adjusting only the rating or only the text content. The
+        update automatically sets the updated_at timestamp. More convenient than the
+        full update endpoint when you only need to change specific fields. The review_id
+        must correspond to a review owned by the authenticated user. Validates that
+        any provided rating is within the 1-5 range. The book association remains
+        unchanged. Requires user authentication and ownership of the review.
+      summary: Partially update specific fields of a book review
       parameters:
       - in: path
         name: id
@@ -1111,18 +826,43 @@ paths:
         required: true
       tags:
       - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
       security:
+      - oauth2:
+        - write
       - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Review'
-          description: ''
+          description: Review fields successfully updated with automatic timestamp
+            management
+        '400':
+          description: Validation error or invalid field values
+        '404':
+          description: Review not found or not owned by authenticated user
     delete:
-      operationId: reviews_destroy
-      description: Delete a book review
+      operationId: delete_user_book_review
+      description: Permanently delete a review written by the authenticated user using
+        the review_id. This operation completely removes the review from the system
+        including the rating, text content, and all associated metadata. The action
+        is irreversible - if the user wants to review the book again, they will need
+        to create a completely new review. Use this tool when a user no longer wants
+        their review to be part of the book's review collection or wants to remove
+        their opinion from the system. This does not affect the book itself or the
+        user's collection relationship to the book - it only removes the review. The
+        book remains in the user's collection with whatever reading status it had.
+        The review_id must correspond to a review owned by the authenticated user.
+        Requires user authentication and ownership of the review.
+      summary: Permanently delete a book review
       parameters:
       - in: path
         name: id
@@ -1133,29 +873,64 @@ paths:
       tags:
       - reviews
       security:
+      - oauth2:
+        - write
       - tokenAuth: []
       responses:
         '204':
-          description: No response body
+          description: Review permanently deleted from the system
+        '404':
+          description: Review not found or not owned by authenticated user
+    get:
+      operationId: get_user_review_details
+      description: Retrieve complete information about a specific review written by
+        the authenticated user using the review_id. This endpoint returns the full
+        review details including the star rating, complete review text, creation and
+        last update timestamps, and comprehensive information about the book being
+        reviewed (title, author, genre, description). Use this tool when you need
+        detailed information about a specific review, such as when editing a review
+        or displaying full review content. The review_id must correspond to a review
+        written by the authenticated user - users cannot access reviews written by
+        other users through this endpoint. The response includes both the review data
+        and associated book metadata for context. Returns 404 if the review_id doesn't
+        exist or doesn't belong to the authenticated user. Requires user authentication.
+      summary: Get detailed information about a specific user review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - reviews
+      security:
+      - oauth2:
+        - write
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Complete review details with associated book information
+        '404':
+          description: Review not found or not owned by authenticated user
   /api/browse/:
     get:
-      operationId: browse_list
-      description: Browse all books in the system with filtering and search
+      operationId: browse_all_available_books
+      description: Browse through the complete catalog of all books available in the
+        system for discovery and exploration purposes. This endpoint returns all books
+        that exist in the system regardless of whether they are in any user's personal
+        collection. Each book entry includes basic information like title, author
+        name, genre, tagline, and creation date. Use this tool when users want to
+        discover new books to potentially add to their collection, search for specific
+        titles or authors, or explore the complete book catalog. This is different
+        from the user collection endpoints - this shows the master catalog of all
+        available books, not user-specific collection data. The response does not
+        include user-specific information like reading status or personal notes. Results
+        are paginated and sorted alphabetically by title. Use the book_id from this
+        response to add books to a user's collection via the user_books endpoints.
+        Requires user authentication for access.
+      summary: Browse and discover all books available in the system
       parameters:
-      - in: query
-        name: author__name__icontains
-        schema:
-          type: string
-      - in: query
-        name: created_at__gte
-        schema:
-          type: string
-          format: date-time
-      - in: query
-        name: created_at__lte
-        schema:
-          type: string
-          format: date-time
       - in: query
         name: genre
         schema:
@@ -1242,39 +1017,62 @@ paths:
           * `thriller` - Thriller
           * `travel` - Travel
           * `young_adult` - Young Adult
-      - name: ordering
-        required: false
-        in: query
-        description: Which field to use when ordering the results.
+      - in: query
+        name: ordering
         schema:
           type: string
+          enum:
+          - -author__name
+          - -created_at
+          - -title
+          - author__name
+          - created_at
+          - title
+        description: 'Sort the book list by specified field. Available options: ''title''
+          (alphabetical), ''created_at'' (newest first), ''author__name'' (by author
+          name), or negative versions for reverse order (''-title'', ''-created_at'',
+          ''-author__name''). Default is alphabetical by title.'
       - name: page
         required: false
         in: query
         description: A page number within the paginated result set.
         schema:
           type: integer
-      - name: search
-        required: false
-        in: query
-        description: A search term.
+      - in: query
+        name: search
         schema:
           type: string
+        description: Search books by title, description, tagline, or author name.
+          Performs case-insensitive text search across book titles, descriptions,
+          taglines, and author names. Use this to find specific books, books by particular
+          authors, or books containing certain keywords in their descriptions.
       tags:
+      - books
       - browse
       security:
+      - oauth2:
+        - read
       - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PaginatedBookList'
-          description: ''
+          description: Paginated catalog of all books available for discovery and
+            collection
   /api/browse/{id}/:
     get:
-      operationId: browse_retrieve
-      description: Get detailed information about a specific book
+      operationId: get_book_catalog_details
+      description: Retrieve complete information about a specific book from the system
+        catalog using the book_id. This endpoint returns detailed book information
+        including title, complete description, author biographical information, genre,
+        tagline, cover image, and publication metadata. Use this tool when you need
+        comprehensive information about a book for display, decision-making about
+        adding it to a collection, or providing detailed book information to users.
+        This shows the master book record with all available metadata but does not
+        include user-specific information like reading status or personal reviews
+        - for that information, use the user collection endpoints. The book_id can
+        be obtained from the book browsing endpoint or from user collection responses.
+        Returns comprehensive author details embedded within the book information.
+        Returns 404 if the book_id doesn't exist in the system. Requires user authentication.
+      summary: Get comprehensive details about a specific book from the catalog
       parameters:
       - in: path
         name: id
@@ -1283,189 +1081,121 @@ paths:
         description: A unique integer value identifying this book.
         required: true
       tags:
+      - books
       - browse
       security:
+      - oauth2:
+        - read
       - tokenAuth: []
       responses:
         '200':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Book'
-          description: ''
+          description: Complete book information with author details and metadata
+        '404':
+          description: Book not found in the system catalog
 components:
   schemas:
-    Author:
-      type: object
-      description: Serializer for Author model with nested book relationships.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        name:
-          type: string
-          description: Author's full name
-          maxLength: 255
-        image:
-          type: string
-          format: uri
-          nullable: true
-          description: Author photo
-        biography:
-          type: string
-          description: Author biographical information
-        books_count:
-          type: integer
-          description: Return the number of books by this author.
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - books_count
-      - created_at
-      - id
-      - name
-      - updated_at
-    AuthorDetail:
-      type: object
-      description: Detailed serializer for Author with list of books.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        name:
-          type: string
-          description: Author's full name
-          maxLength: 255
-        image:
-          type: string
-          format: uri
-          nullable: true
-          description: Author photo
-        biography:
-          type: string
-          description: Author biographical information
-        books_count:
-          type: integer
-          description: Return the number of books by this author.
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-        books:
-          type: array
-          items:
-            $ref: '#/components/schemas/Book'
-          readOnly: true
-      required:
-      - books
-      - books_count
-      - created_at
-      - id
-      - name
-      - updated_at
     AuthorRequest:
       type: object
-      description: Serializer for Author model with nested book relationships.
+      description: |-
+        Serializer for Author model with nested book relationships.
+
+        Provides comprehensive author information including biographical details
+        and the total count of books they have authored.
       properties:
         name:
           type: string
           minLength: 1
-          description: Author's full name
+          description: Author's full name (must be unique)
           maxLength: 255
         image:
-          type: string
+          type:
+          - string
+          - 'null'
           format: binary
-          nullable: true
-          description: Author photo
+          description: Profile photo of the author
         biography:
           type: string
-          description: Author biographical information
+          description: Biographical information about the author
       required:
       - name
-    Book:
-      type: object
-      description: Serializer for Book model with author nesting.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        title:
-          type: string
-          description: Book title
-          maxLength: 255
-        tagline:
-          type: string
-          description: Brief book description
-          maxLength: 500
-        description:
-          type: string
-          description: Detailed book description
-        image:
-          type: string
-          format: uri
-          nullable: true
-          description: Book cover image
-        genre:
-          $ref: '#/components/schemas/GenreEnum'
-        author:
-          allOf:
-          - $ref: '#/components/schemas/Author'
-          readOnly: true
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - author
-      - created_at
-      - genre
-      - id
-      - title
-      - updated_at
     BookRequest:
       type: object
-      description: Serializer for Book model with author nesting.
+      description: |-
+        Serializer for Book model with comprehensive author information.
+
+        Handles both reading book data with nested author details and creating
+        new books with automatic author creation or lookup.
       properties:
         title:
           type: string
           minLength: 1
-          description: Book title
+          description: The title of the book
           maxLength: 255
         tagline:
           type: string
-          description: Brief book description
+          description: Brief description or tagline for the book
           maxLength: 500
         description:
           type: string
-          description: Detailed book description
+          description: Detailed description of the book's plot and themes
         image:
-          type: string
+          type:
+          - string
+          - 'null'
           format: binary
-          nullable: true
           description: Book cover image
         genre:
-          $ref: '#/components/schemas/GenreEnum'
+          allOf:
+          - $ref: '#/components/schemas/GenreEnum'
+          description: |-
+            Book genre category
+
+            * `art` - Art
+            * `biography` - Biography
+            * `business` - Business
+            * `chick_lit` - Chick Lit
+            * `childrens` - Children's
+            * `christian` - Christian
+            * `classics` - Classics
+            * `comics` - Comics
+            * `contemporary` - Contemporary
+            * `cookbooks` - Cookbooks
+            * `crime` - Crime
+            * `ebooks` - Ebooks
+            * `fantasy` - Fantasy
+            * `fiction` - Fiction
+            * `gay_and_lesbian` - Gay and Lesbian
+            * `graphic_novels` - Graphic Novels
+            * `historical_fiction` - Historical Fiction
+            * `history` - History
+            * `horror` - Horror
+            * `humor_and_comedy` - Humor and Comedy
+            * `manga` - Manga
+            * `memoir` - Memoir
+            * `music` - Music
+            * `mystery` - Mystery
+            * `nonfiction` - Nonfiction
+            * `paranormal` - Paranormal
+            * `philosophy` - Philosophy
+            * `poetry` - Poetry
+            * `psychology` - Psychology
+            * `religion` - Religion
+            * `romance` - Romance
+            * `science` - Science
+            * `science_fiction` - Science Fiction
+            * `self_help` - Self Help
+            * `suspense` - Suspense
+            * `spirituality` - Spirituality
+            * `sports` - Sports
+            * `thriller` - Thriller
+            * `travel` - Travel
+            * `young_adult` - Young Adult
         author_name:
           type: string
           writeOnly: true
           minLength: 1
-          description: Author name for creating/getting author
+          description: Author name for creating/getting author. If author doesn't
+            exist, they will be created automatically.
       required:
       - author_name
       - genre
@@ -1554,204 +1284,25 @@ components:
         * `thriller` - Thriller
         * `travel` - Travel
         * `young_adult` - Young Adult
-    Group:
-      type: object
-      description: Serializer for Group model.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        name:
-          type: string
-          maxLength: 150
-        user_count:
-          type: integer
-          description: Return number of users in this group.
-          readOnly: true
-      required:
-      - id
-      - name
-      - user_count
-    PaginatedAuthorList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Author'
-    PaginatedBookList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Book'
-    PaginatedGroupList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Group'
-    PaginatedReviewList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/Review'
-    PaginatedUserBookList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/UserBook'
-    PaginatedUserList:
-      type: object
-      required:
-      - count
-      - results
-      properties:
-        count:
-          type: integer
-          example: 123
-        next:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=4
-        previous:
-          type: string
-          nullable: true
-          format: uri
-          example: http://api.example.org/accounts/?page=2
-        results:
-          type: array
-          items:
-            $ref: '#/components/schemas/User'
     PatchedReviewRequest:
       type: object
-      description: Serializer for Review model with book/user validation.
+      description: |-
+        Serializer for Review model with comprehensive validation and user-book relationships.
+
+        Ensures users can only review books once and validates rating scores.
       properties:
         book_id:
           type: integer
           writeOnly: true
+          description: ID of the book being reviewed
         rating:
           type: integer
           maximum: 5
           minimum: 1
-          description: Star rating from 1-5
+          description: Star rating from 1 to 5 stars
         text:
           type: string
-          description: Review text content
-    PatchedUserBookRequest:
-      type: object
-      description: Serializer for UserBook model with book details and status handling.
-      properties:
-        book_id:
-          type: integer
-          writeOnly: true
-        reading_status:
-          $ref: '#/components/schemas/ReadingStatusEnum'
-        title:
-          type: string
-          writeOnly: true
-          minLength: 1
-        author_name:
-          type: string
-          writeOnly: true
-          minLength: 1
-        genre:
-          allOf:
-          - $ref: '#/components/schemas/GenreEnum'
-          writeOnly: true
-        tagline:
-          type: string
-          writeOnly: true
-        description:
-          type: string
-          writeOnly: true
+          description: Written review content (optional)
     PatchedUserRequest:
       type: object
       description: Serializer for User model with core fields.
@@ -1791,267 +1342,115 @@ components:
         * `reading` - Reading
         * `finished` - Finished
         * `dropped` - Dropped
-    Review:
-      type: object
-      description: Serializer for Review model with book/user validation.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        book:
-          allOf:
-          - $ref: '#/components/schemas/Book'
-          readOnly: true
-        user:
-          type: string
-          readOnly: true
-        rating:
-          type: integer
-          maximum: 5
-          minimum: 1
-          description: Star rating from 1-5
-        text:
-          type: string
-          description: Review text content
-        created_at:
-          type: string
-          format: date-time
-          readOnly: true
-        updated_at:
-          type: string
-          format: date-time
-          readOnly: true
-      required:
-      - book
-      - created_at
-      - id
-      - rating
-      - updated_at
-      - user
     ReviewRequest:
       type: object
-      description: Serializer for Review model with book/user validation.
+      description: |-
+        Serializer for Review model with comprehensive validation and user-book relationships.
+
+        Ensures users can only review books once and validates rating scores.
       properties:
         book_id:
           type: integer
           writeOnly: true
+          description: ID of the book being reviewed
         rating:
           type: integer
           maximum: 5
           minimum: 1
-          description: Star rating from 1-5
+          description: Star rating from 1 to 5 stars
         text:
           type: string
-          description: Review text content
+          description: Written review content (optional)
       required:
       - book_id
       - rating
-    User:
-      type: object
-      description: Serializer for User model with core fields.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        username:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        email:
-          type: string
-          format: email
-          title: Email address
-          maxLength: 254
-        first_name:
-          type: string
-          maxLength: 150
-        last_name:
-          type: string
-          maxLength: 150
-        full_name:
-          type: string
-          description: Return user's full name.
-          readOnly: true
-        date_joined:
-          type: string
-          format: date-time
-          readOnly: true
-        is_active:
-          type: boolean
-          title: Active
-          description: Designates whether this user should be treated as active. Unselect
-            this instead of deleting accounts.
-      required:
-      - date_joined
-      - full_name
-      - id
-      - username
-    UserBook:
-      type: object
-      description: Serializer for UserBook model with book details and status handling.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        book:
-          allOf:
-          - $ref: '#/components/schemas/Book'
-          readOnly: true
-        reading_status:
-          $ref: '#/components/schemas/ReadingStatusEnum'
-        date_added:
-          type: string
-          format: date-time
-          readOnly: true
-        date_started:
-          type: string
-          format: date-time
-          readOnly: true
-          nullable: true
-          description: When user started reading
-        date_finished:
-          type: string
-          format: date-time
-          readOnly: true
-          nullable: true
-          description: When user finished reading
-      required:
-      - book
-      - date_added
-      - date_finished
-      - date_started
-      - id
-    UserBookDetail:
-      type: object
-      description: Detailed serializer for UserBook including review if exists.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        book:
-          allOf:
-          - $ref: '#/components/schemas/Book'
-          readOnly: true
-        reading_status:
-          $ref: '#/components/schemas/ReadingStatusEnum'
-        date_added:
-          type: string
-          format: date-time
-          readOnly: true
-        date_started:
-          type: string
-          format: date-time
-          readOnly: true
-          nullable: true
-          description: When user started reading
-        date_finished:
-          type: string
-          format: date-time
-          readOnly: true
-          nullable: true
-          description: When user finished reading
-        review:
-          type: object
-          additionalProperties: {}
-          nullable: true
-          description: Get user's review for this book if it exists.
-          readOnly: true
-      required:
-      - book
-      - date_added
-      - date_finished
-      - date_started
-      - id
-      - review
     UserBookRequest:
       type: object
-      description: Serializer for UserBook model with book details and status handling.
+      description: |-
+        Serializer for UserBook model with comprehensive book and reading status management.
+
+        Supports both adding existing books to collection via book_id or creating
+        new books directly with title, author_name, and genre fields.
       properties:
         book_id:
           type: integer
           writeOnly: true
+          description: ID of existing book to add to collection
         reading_status:
-          $ref: '#/components/schemas/ReadingStatusEnum'
+          allOf:
+          - $ref: '#/components/schemas/ReadingStatusEnum'
+          description: |-
+            Current reading status for this book
+
+            * `want_to_read` - Want to Read
+            * `reading` - Reading
+            * `finished` - Finished
+            * `dropped` - Dropped
         title:
           type: string
           writeOnly: true
           minLength: 1
+          description: Title for new book (used when creating book inline)
         author_name:
           type: string
           writeOnly: true
           minLength: 1
+          description: Author name for new book (used when creating book inline)
         genre:
           allOf:
           - $ref: '#/components/schemas/GenreEnum'
           writeOnly: true
+          description: |-
+            Genre for new book (used when creating book inline)
+
+            * `art` - Art
+            * `biography` - Biography
+            * `business` - Business
+            * `chick_lit` - Chick Lit
+            * `childrens` - Children's
+            * `christian` - Christian
+            * `classics` - Classics
+            * `comics` - Comics
+            * `contemporary` - Contemporary
+            * `cookbooks` - Cookbooks
+            * `crime` - Crime
+            * `ebooks` - Ebooks
+            * `fantasy` - Fantasy
+            * `fiction` - Fiction
+            * `gay_and_lesbian` - Gay and Lesbian
+            * `graphic_novels` - Graphic Novels
+            * `historical_fiction` - Historical Fiction
+            * `history` - History
+            * `horror` - Horror
+            * `humor_and_comedy` - Humor and Comedy
+            * `manga` - Manga
+            * `memoir` - Memoir
+            * `music` - Music
+            * `mystery` - Mystery
+            * `nonfiction` - Nonfiction
+            * `paranormal` - Paranormal
+            * `philosophy` - Philosophy
+            * `poetry` - Poetry
+            * `psychology` - Psychology
+            * `religion` - Religion
+            * `romance` - Romance
+            * `science` - Science
+            * `science_fiction` - Science Fiction
+            * `self_help` - Self Help
+            * `suspense` - Suspense
+            * `spirituality` - Spirituality
+            * `sports` - Sports
+            * `thriller` - Thriller
+            * `travel` - Travel
+            * `young_adult` - Young Adult
         tagline:
           type: string
           writeOnly: true
+          description: Brief tagline for new book (optional)
         description:
           type: string
           writeOnly: true
-    UserDetail:
-      type: object
-      description: Detailed serializer for User with additional information.
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        username:
-          type: string
-          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
-            only.
-          pattern: ^[\w.@+-]+$
-          maxLength: 150
-        email:
-          type: string
-          format: email
-          title: Email address
-          maxLength: 254
-        first_name:
-          type: string
-          maxLength: 150
-        last_name:
-          type: string
-          maxLength: 150
-        full_name:
-          type: string
-          description: Return user's full name.
-          readOnly: true
-        date_joined:
-          type: string
-          format: date-time
-          readOnly: true
-        is_active:
-          type: boolean
-          title: Active
-          description: Designates whether this user should be treated as active. Unselect
-            this instead of deleting accounts.
-        group_count:
-          type: integer
-          description: Return number of groups user belongs to.
-          readOnly: true
-        last_login:
-          type: string
-          format: date-time
-          nullable: true
-        is_staff:
-          type: boolean
-          title: Staff status
-          description: Designates whether the user can log into this admin site.
-        is_superuser:
-          type: boolean
-          title: Superuser status
-          description: Designates that this user has all permissions without explicitly
-            assigning them.
-      required:
-      - date_joined
-      - full_name
-      - group_count
-      - id
-      - username
+          description: Detailed description for new book (optional)
     UserRequest:
       type: object
       description: Serializer for User model with core fields.

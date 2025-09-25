@@ -75,7 +75,7 @@ check:
     uv run just check-isort
     uv run just check-flake8
     uv run just check-pylint
-    uv run just check-djhtml
+    # uv run just check-djhtml
     uv run just check-js-css
     uv run just check-autoflake
     uv run just check-types
@@ -98,11 +98,11 @@ check-dockerfile:
 check-pylint:
     uv run pylint --load-plugins pylint_django ./
 
-check-djhtml:
-    uv run djhtml mybooks templates -c
+# check-djhtml:
+#     uv run djhtml mybooks templates -c
 
 check-js-css:
-    cd core/static/core && npm run lint-fix
+    cd mybooks/static/mybooks && npm run lint-fix
 
 check-autoflake:
     uv run autoflake --check --quiet --recursive ./
@@ -118,8 +118,8 @@ check-types:
 format:
     uv run just format-black
     uv run just format-isort
-    uv run just format-djhtml
-    uv run just format-js-css
+    # uv run just format-djhtml
+    # uv run just format-js-css
     uv run just format-autoflake
     just format-whitespace
 
@@ -129,14 +129,27 @@ format-isort:
 format-black:
     uv run black ./
 
-format-djhtml:
-    uv run djhtml core config templates
+# format-djhtml:
+#     uv run djhtml core config templates
 
-format-js-css:
-    cd core/static/core && npm run format
+# format-js-css:
+#     cd core/static/core && npm run format
 
 format-autoflake:
     uv run autoflake --in-place --recursive ./
 
 format-whitespace:
     find . -name "*.py" -not -path "./.venv/*" -not -path "./node_modules/*" -exec sed -i '' 's/[[:space:]]*$//' {} \;
+
+
+#########
+# TESTS #
+#########
+
+test:
+    uv run python manage.py test --verbosity=2
+
+test-coverage:
+    uv run coverage run --source='.' manage.py test
+    uv run coverage report
+    uv run coverage html

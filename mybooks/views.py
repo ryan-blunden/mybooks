@@ -1,9 +1,10 @@
 from django.conf import settings
 from django.contrib.auth.models import Group, User
+from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import extend_schema, extend_schema_view
-from oauth2_provider.contrib.rest_framework import TokenHasReadWriteScope, TokenHasScope
-from rest_framework import permissions, serializers, viewsets
+from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
+from oauth2_provider.contrib.rest_framework import IsAuthenticatedOrTokenHasScope
+from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
@@ -13,15 +14,18 @@ def oauth_metadata(request):
     """Provide OAuth2 provider metadata."""
     return {
         "issuer": settings.SITE_URL,
-        "authorization_endpoint": f"{settings.SITE_URL}/oauth/authorize",
-        "token_endpoint": f"{settings.SITE_URL}/oauth/token",
-        "registration_endpoint": f"{settings.SITE_URL}/oauth/register",
-        "scopes_supported": ["org:read", "project:write", "team:write", "event:write"],
+        "authorization_endpoint": request.build_absolute_uri(reverse("authorize")),
+        "token_endpoint": request.build_absolute_uri(reverse("token")),
+        "registration_endpoint": request.build_absolute_uri(reverse("oauth2_dcr")),
+        "userinfo_endpoint": request.build_absolute_uri(reverse("user-info")),
+        "introspection_endpoint": request.build_absolute_uri(reverse("introspect")),
+        "jwks_uri": request.build_absolute_uri(reverse("jwks-info")),
+        "revocation_endpoint": request.build_absolute_uri(reverse("revoke-token")),
+        "scopes_supported": ["read", "write", "users", "groups"],
         "response_types_supported": ["code"],
         "response_modes_supported": ["query"],
         "grant_types_supported": ["authorization_code", "refresh_token"],
         "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post", "none"],
-        "revocation_endpoint": f"{settings.SITE_URL}/oauth/token",
         "code_challenge_methods_supported": ["plain", "S256"],
     }
 
@@ -72,12 +76,67 @@ class GroupSerializer(serializers.ModelSerializer):
 
 # Enhanced ViewSets with comprehensive filtering and search
 @extend_schema_view(
-    list=extend_schema(description="List all users with filtering and search capabilities"),
-    create=extend_schema(description="Create a new user account"),
-    retrieve=extend_schema(description="Get detailed information about a specific user"),
-    update=extend_schema(description="Update user information"),
-    partial_update=extend_schema(description="Partially update user information"),
-    destroy=extend_schema(description="Delete a user account"),
+    list=extend_schema(
+        operation_id="users_list",
+        summary="List all users",
+        description="List all users with filtering and search capabilities",
+        tags=["users"],
+        responses={
+            200: OpenApiResponse(description="Paginated list of system users"),
+        },
+    ),
+    create=extend_schema(
+        operation_id="users_create",
+        summary="Create user",
+        description="Create a new user account",
+        tags=["users"],
+        responses={
+            201: OpenApiResponse(description="User successfully created"),
+            400: OpenApiResponse(description="Validation error"),
+        },
+    ),
+    retrieve=extend_schema(
+        operation_id="users_retrieve",
+        summary="Get user details",
+        description="Get detailed information about a specific user",
+        tags=["users"],
+        responses={
+            200: OpenApiResponse(description="Detailed user information"),
+            404: OpenApiResponse(description="User not found"),
+        },
+    ),
+    update=extend_schema(
+        operation_id="users_update",
+        summary="Update user",
+        description="Update user information",
+        tags=["users"],
+        responses={
+            200: OpenApiResponse(description="User successfully updated"),
+            400: OpenApiResponse(description="Validation error"),
+            404: OpenApiResponse(description="User not found"),
+        },
+    ),
+    partial_update=extend_schema(
+        operation_id="users_partial_update",
+        summary="Partially update user",
+        description="Partially update user information",
+        tags=["users"],
+        responses={
+            200: OpenApiResponse(description="User successfully updated"),
+            400: OpenApiResponse(description="Validation error"),
+            404: OpenApiResponse(description="User not found"),
+        },
+    ),
+    destroy=extend_schema(
+        operation_id="users_destroy",
+        summary="Delete user",
+        description="Delete a user account",
+        tags=["users"],
+        responses={
+            204: OpenApiResponse(description="User successfully deleted"),
+            404: OpenApiResponse(description="User not found"),
+        },
+    ),
 )
 class UserViewSet(viewsets.ModelViewSet):
     """
@@ -88,7 +147,8 @@ class UserViewSet(viewsets.ModelViewSet):
 
     queryset = User.objects.all()
     serializer_class = UserSerializer
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser, TokenHasReadWriteScope]
+    permission_classes = [IsAuthenticatedOrTokenHasScope]
+    required_scopes = ["users"]
 
     # Filter configuration matching books/views.py pattern
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -116,51 +176,20 @@ class UserViewSet(viewsets.ModelViewSet):
 
     @extend_schema(
         responses={
-            200: {
-                "type": "object",
-                "description": "User statistics across the system",
-                "properties": {
-                    "total_users": {"type": "integer", "description": "Total number of users"},
-                    "active_users": {"type": "integer", "description": "Number of active users"},
-                    "inactive_users": {"type": "integer", "description": "Number of inactive users"},
-                    "staff_users": {"type": "integer", "description": "Number of staff users"},
-                    "superusers": {"type": "integer", "description": "Number of superusers"},
+            200: OpenApiResponse(
+                description="Recently joined users",
+                response={
+                    "type": "object",
+                    "properties": {
+                        "count": {"type": "integer", "description": "Number of recent users"},
+                        "recent_users": {
+                            "type": "array",
+                            "items": {"$ref": "#/components/schemas/User"},
+                            "description": "List of recently joined users",
+                        },
+                    },
                 },
-            }
-        },
-        description="Get comprehensive user statistics including counts by status and permissions",
-    )
-    @action(detail=False, methods=["get"])
-    def stats(self, request):
-        """Get user statistics."""
-        queryset = self.get_queryset()
-
-        total_users = queryset.count()
-        active_users = queryset.filter(is_active=True).count()
-        staff_users = queryset.filter(is_staff=True).count()
-        superusers = queryset.filter(is_superuser=True).count()
-
-        return Response(
-            {
-                "total_users": total_users,
-                "active_users": active_users,
-                "inactive_users": total_users - active_users,
-                "staff_users": staff_users,
-                "superusers": superusers,
-                "regular_users": active_users - staff_users,
-            }
-        )
-
-    @extend_schema(
-        responses={
-            200: {
-                "type": "object",
-                "description": "Recently joined users",
-                "properties": {
-                    "count": {"type": "integer", "description": "Number of recent users"},
-                    "recent_users": {"type": "array", "items": {"$ref": "#/components/schemas/User"}, "description": "List of recently joined users"},
-                },
-            }
+            )
         },
         description="Get the 10 most recently joined users in the system",
     )
@@ -173,8 +202,25 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 @extend_schema_view(
-    list=extend_schema(description="List all groups with filtering and search capabilities"),
-    retrieve=extend_schema(description="Get detailed information about a specific group"),
+    list=extend_schema(
+        operation_id="groups_list",
+        summary="List all groups",
+        description="List all groups with filtering and search capabilities",
+        tags=["groups"],
+        responses={
+            200: OpenApiResponse(description="Paginated list of user groups"),
+        },
+    ),
+    retrieve=extend_schema(
+        operation_id="groups_retrieve",
+        summary="Get group details",
+        description="Get detailed information about a specific group",
+        tags=["groups"],
+        responses={
+            200: OpenApiResponse(description="Detailed group information with user count"),
+            404: OpenApiResponse(description="Group not found"),
+        },
+    ),
 )
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -185,7 +231,7 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
 
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = [permissions.IsAuthenticated, permissions.IsAdminUser, TokenHasScope]
+    permission_classes = [IsAuthenticatedOrTokenHasScope]
     required_scopes = ["groups"]
 
     # Filter configuration matching books/views.py pattern
@@ -201,15 +247,17 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
 
     @extend_schema(
         responses={
-            200: {
-                "type": "object",
-                "description": "Users in the specified group",
-                "properties": {
-                    "group": {"type": "string", "description": "Group name"},
-                    "user_count": {"type": "integer", "description": "Number of users in group"},
-                    "users": {"type": "array", "items": {"$ref": "#/components/schemas/User"}, "description": "List of users in this group"},
+            200: OpenApiResponse(
+                description="Users in the specified group",
+                response={
+                    "type": "object",
+                    "properties": {
+                        "group": {"type": "string", "description": "Group name"},
+                        "user_count": {"type": "integer", "description": "Number of users in group"},
+                        "users": {"type": "array", "items": {"$ref": "#/components/schemas/User"}, "description": "List of users in this group"},
+                    },
                 },
-            }
+            )
         },
         description="Get all users that belong to this group",
     )
@@ -220,14 +268,3 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
         users = group.user_set.all()
         serializer = UserSerializer(users, many=True)
         return Response({"group": group.name, "user_count": users.count(), "users": serializer.data})
-
-    @action(detail=False, methods=["get"])
-    def stats(self, request):
-        """Get group statistics."""
-        queryset = self.get_queryset()
-
-        total_groups = queryset.count()
-        groups_with_users = queryset.filter(user_set__isnull=False).distinct().count()
-        empty_groups = total_groups - groups_with_users
-
-        return Response({"total_groups": total_groups, "groups_with_users": groups_with_users, "empty_groups": empty_groups})

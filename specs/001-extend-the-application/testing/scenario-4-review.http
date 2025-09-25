@@ -16,10 +16,9 @@ Authorization: Token YOUR_TOKEN
 Content-Type: application/json
 
 {
-  "book": 1,
+  "book_id": 1,
   "rating": 5,
-  "review_text": "An absolutely delightful adventure! Tolkien's world-building is incredible and Bilbo's journey is both exciting and heartwarming. A perfect introduction to Middle-earth.",
-  "is_spoiler": false
+  "text": "An absolutely delightful adventure! Tolkien's world-building is incredible and Bilbo's journey is both exciting and heartwarming. A perfect introduction to Middle-earth."
 }
 
 ### Expected Response:

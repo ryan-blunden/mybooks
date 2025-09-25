@@ -8,7 +8,7 @@ from oauth2_provider import urls as oauth2_urls
 from oauth_dcr.views import DynamicClientRegistrationView
 from rest_framework.routers import DefaultRouter
 
-from mybooks.views import GroupViewSet, UserViewSet
+from mybooks.views import GroupViewSet, UserViewSet, oauth_metadata
 
 # DRF Router configuration for API endpoints
 router = DefaultRouter()
@@ -17,6 +17,8 @@ router.register(r"groups", GroupViewSet, basename="group")
 
 urlpatterns = [
     path(r"health-check/", include("health_check.urls")),
+    path(".well-known/oauth-authorization-server", oauth_metadata),
+    path("oauth/.well-known/oauth-authorization-server", oauth_metadata),
     # Core API endpoints (users, groups)
     path("api/", include(router.urls)),
     # Book Collection API endpoints
