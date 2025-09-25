@@ -26,7 +26,8 @@ dev-get-tls:
 	doppler secrets get TLS_KEY --plain > tls/key.pem    
 
 dev-server:
-    doppler run -- uv run manage.py tailwind dev
+    # uv run manage.py tailwind dev
+    uv run manage.py runserver_plus 0.0.0.0:8080
 
 dev-mail:
     npx maildev --smtp 1025 --web 1080 --ip 0.0.0.0

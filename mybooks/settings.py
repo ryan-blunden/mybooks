@@ -84,6 +84,7 @@ INSTALLED_APPS = [
     "health_check.contrib.db_heartbeat",
     "health_check.contrib.mail",
     "mybooks.apps.MyBooksConfig",
+    "books",
     "theme",
 ]
 
@@ -380,6 +381,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated", "oauth2_provider.contrib.rest_framework.permissions.TokenHasScope"),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # 'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',)
 }
 
 OAUTH2_PROVIDER = {
