@@ -1,0 +1,72 @@
+# Scenario 4: Complete Reading and Add Review
+# User Story: As a reader, I want to rate and review books I've finished
+
+### 1. Ensure "The Hobbit" is marked as finished (if not done in Scenario 2)
+PATCH http://localhost:8080/api/books/1/
+Authorization: Token YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "reading_status": "finished"
+}
+
+### 2. Add a review for "The Hobbit"
+POST http://localhost:8080/api/reviews/
+Authorization: Token YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "book": 1,
+  "rating": 5,
+  "review_text": "An absolutely delightful adventure! Tolkien's world-building is incredible and Bilbo's journey is both exciting and heartwarming. A perfect introduction to Middle-earth.",
+  "is_spoiler": false
+}
+
+### Expected Response:
+# {
+#   "id": 1,
+#   "book": {
+#     "id": 1,
+#     "title": "The Hobbit", 
+#     "author": "J.R.R. Tolkien"
+#   },
+#   "rating": 5,
+#   "review_text": "An absolutely delightful adventure! Tolkien's world-building is incredible and Bilbo's journey is both excited and heartwarming. A perfect introduction to Middle-earth.",
+#   "is_spoiler": false,
+#   "date_created": "2025-09-25T16:00:00Z"
+# }
+
+### 3. Verify review appears in book details (average rating updated)
+GET http://localhost:8080/api/books/1/
+Authorization: Token YOUR_TOKEN
+Content-Type: application/json
+
+### Expected Response:
+# {
+#   "id": 1,
+#   "title": "The Hobbit",
+#   "average_rating": 5.0,  // Should be updated
+#   "review_count": 1,      // Should be updated
+#   ...
+# }
+
+### 4. Get all reviews by this user
+GET http://localhost:8080/api/reviews/
+Authorization: Token YOUR_TOKEN
+Content-Type: application/json
+
+### 5. Try to add duplicate review (should fail)
+POST http://localhost:8080/api/reviews/
+Authorization: Token YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "book": 1,
+  "rating": 4,
+  "review_text": "Second review attempt"
+}
+
+### Expected Response: 400 Bad Request
+# {
+#   "non_field_errors": ["User has already reviewed this book"]
+# }

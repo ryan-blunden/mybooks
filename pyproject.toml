@@ -25,6 +25,7 @@ dependencies = [
   "django-oauth-toolkit-dcr>=0.1.0",
   "django-cors-headers>=4.9.0",
   "drf-spectacular>=0.28.0",
+  "django-filter>=25.1",
 ]
 
 [dependency-groups]
@@ -48,6 +49,7 @@ dev = [
   "ty",
   "django-types",
   "honcho>=2.0.0",
+  "httpie>=3.2.4",
 ]
 
 [tool.setuptools]

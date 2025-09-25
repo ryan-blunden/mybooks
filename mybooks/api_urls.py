@@ -1,12 +1,16 @@
-from django.urls import path, include
+from django.urls import include, path
 from rest_framework.routers import DefaultRouter
-from mybooks.api import GroupList, UserDetails, UserList 
 
-# TODO: add BookViewSet and import it here
+from mybooks.views import GroupViewSet, UserViewSet
 
-# router = DefaultRouter()
-# router.register(r'books', BookViewSet)
+# DRF Router configuration for core API endpoints
+router = DefaultRouter()
+router.register(r"users", UserViewSet, basename="user")
+router.register(r"groups", GroupViewSet, basename="group")
 
-# urlpatterns = [
-#     path('', include(router.urls)),
-# ]
+urlpatterns = [
+    # Core API endpoints (users, groups)
+    path("", include(router.urls)),
+    # Book Collection API endpoints
+    path("", include("books.urls")),
+]

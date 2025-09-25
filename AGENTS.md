@@ -32,7 +32,8 @@ Use `just` commands for consistency (they ensure correct environment setup and c
 just dev-venv                   # Create virtual environment and install dependencies
 just dev-dependencies           # Install/update development dependencies
 just dev-env-file               # Download environment variables from Doppler
-just dev-server                 # Run development server with Tailwind CSS
+source .venv/bin/activate       # REQUIRED: Activate virtual environment first
+just dev-server                 # Run development server on port 8080 (runserver_plus)
 
 # Code quality
 just format                     # Format code with black, isort, djhtml, autoflake

@@ -1,0 +1,49 @@
+# Scenario 2: Update Reading Status
+# User Story: As a reader, I want to update my reading progress
+
+### 1. Start reading "The Hobbit" (change status from want_to_read to reading)
+PATCH http://localhost:8080/api/books/1/
+Authorization: Token YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "reading_status": "reading"
+}
+
+### Expected Response:
+# {
+#   "id": 1,
+#   "title": "The Hobbit",
+#   "author": {...},
+#   "reading_status": "reading",
+#   "date_started": "2025-09-25T11:00:00Z",  // Auto-set when status changes to reading
+#   "date_finished": null,
+#   ...
+# }
+
+### 2. Verify status change
+GET http://localhost:8080/api/books/1/
+Authorization: Token YOUR_TOKEN
+Content-Type: application/json
+
+### 3. Check books by reading status
+GET http://localhost:8080/api/books/by_status/?status=reading
+Authorization: Token YOUR_TOKEN
+Content-Type: application/json
+
+### 4. Finish reading the book
+PATCH http://localhost:8080/api/books/1/
+Authorization: Token YOUR_TOKEN
+Content-Type: application/json
+
+{
+  "reading_status": "finished"
+}
+
+### Expected Response:
+# {
+#   "id": 1,
+#   "reading_status": "finished",
+#   "date_finished": "2025-09-25T15:30:00Z",  // Auto-set when status changes to finished
+#   ...
+# }

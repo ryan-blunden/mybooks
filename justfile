@@ -27,7 +27,7 @@ dev-get-tls:
 
 dev-server:
     # uv run manage.py tailwind dev
-    uv run manage.py runserver_plus 0.0.0.0:8080
+    uv run manage.py runserver_plus [::]:8080
 
 dev-mail:
     npx maildev --smtp 1025 --web 1080 --ip 0.0.0.0
@@ -51,6 +51,11 @@ pre-commit:
 
 app-dump-data app model:
     uv run manage.py dumpdata {{app}}.{{model}} --format=yaml --indent=2 > {{app}}/fixtures/{{model}}.yaml
+
+app-api-spec:
+    @echo "Generating OpenAPI specification..."
+    uv run manage.py spectacular --file openapi.yaml --format openapi
+    @echo "API spec saved to openapi.yaml"
 
 # app-load-base-data:
 
@@ -94,7 +99,7 @@ check-pylint:
     uv run pylint --load-plugins pylint_django ./
 
 check-djhtml:
-    uv run djhtml core config templates -c
+    uv run djhtml mybooks templates -c
 
 check-js-css:
     cd core/static/core && npm run lint-fix

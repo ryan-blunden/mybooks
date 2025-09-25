@@ -1,0 +1,35 @@
+# Book Collection API - Setup and Authentication
+# This file creates test users and authentication tokens for API testing
+
+### 1. Create Test User (Django Shell Command)
+# Run this command first:
+# python manage.py shell -c "
+# from django.contrib.auth.models import User
+# from rest_framework.authtoken.models import Token
+# user, created = User.objects.get_or_create(username='testuser', defaults={'email': 'test@example.com'})
+# if created: user.set_password('testpass123'); user.save()
+# token, created = Token.objects.get_or_create(user=user)
+# print(f'Auth token: {token.key}')
+# "
+
+### 2. Verify API Root (Should return 401 - authentication required)
+GET http://localhost:8080/api/
+Content-Type: application/json
+
+### 3. Test Authentication (Replace YOUR_TOKEN with actual token from step 1)
+GET http://localhost:8080/api/books/
+Authorization: Token YOUR_TOKEN
+Content-Type: application/json
+
+### 4. Check API Documentation Endpoints
+GET http://localhost:8080/api/schema/
+
+###
+GET http://localhost:8080/api/docs/
+
+###
+GET http://localhost:8080/api/redoc/
+
+### Variables for Testing
+# @baseUrl = http://localhost:8080/api
+# @token = YOUR_TOKEN_HERE

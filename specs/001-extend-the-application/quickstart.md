@@ -6,9 +6,12 @@
 
 ## Prerequisites
 
-1. **Authentication**: Create a Token model to get an auth token using the django shell
+1. **Development Server**: Start with `just dev-server` or `uv run manage.py runserver_plus 0.0.0.0:8080`
+   - **Important**: First activate virtual environment: `source .venv/bin/activate`
 
-2. **API Base URL**: `http://localhost:8080/api`
+2. **Authentication**: Create a Token model to get an auth token using the django shell
+
+3. **API Base URL**: `http://localhost:8080/api`
 
 3. **Headers**: Include auth token in all requests
    ```bash
@@ -26,7 +29,7 @@
 
 ```bash
 # Step 1: Add "The Hobbit" by J.R.R. Tolkien
-curl -X POST http://localhost:8080/api/v1/books/ \
+curl -X POST http://localhost:8080/api/books/ \
   -H "Authorization: Token YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{

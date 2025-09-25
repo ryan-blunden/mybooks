@@ -41,54 +41,57 @@ Django app separation:
 - **Tests**: Test files explicitly excluded from scope per plan.md
 
 ## Phase 3.1: Setup
-- [ ] T001 Configure Django settings for DRF in mybooks/settings.py (add django_filters, drf_spectacular to INSTALLED_APPS)
-- [ ] T002 Update mybooks/api_urls.py to include books API endpoints
-- [ ] T003 [P] Configure drf-spectacular settings for OpenAPI generation in mybooks/settings.py
+- [X] T001 Configure Django settings for DRF in mybooks/settings.py (add django_filters, drf_spectacular to INSTALLED_APPS)
+- [X] T002 Update mybooks/api_urls.py to include books API endpoints
+- [X] T003 [P] Configure drf-spectacular settings for OpenAPI generation in mybooks/settings.py
 
 ## Phase 3.2: Tests First (TDD) ⚠️ MUST COMPLETE BEFORE 3.3
 **CRITICAL: These tests MUST be written and MUST FAIL before ANY implementation**
 **Note: Tests explicitly excluded from initial scope per plan.md - Skip this phase**
 
 ## Phase 3.3: Core Models Implementation
-- [ ] T004 [P] Book model in books/models.py with genre choices, timestamps
-- [ ] T005 [P] Author model in books/models.py with name, biography, image fields
-- [ ] T006 UserBook junction model in books/models.py with reading status, date tracking
-- [ ] T007 Review model in books/models.py with rating validation, user/book relationships
-- [ ] T008 Create and run Django migrations for books app
+- [X] T004 [P] Book model in books/models.py with genre choices, timestamps
+- [X] T005 [P] Author model in books/models.py with name, biography, image fields
+- [X] T006 UserBook junction model in books/models.py with reading status, date tracking
+- [X] T007 Review model in books/models.py with rating validation, user/book relationships
+- [X] T008 Create and run Django migrations for books app
 
 ## Phase 3.4: DRF Serializers
-- [ ] T009 [P] AuthorSerializer in books/serializers.py for nested book relationships
-- [ ] T010 [P] BookSerializer in books/serializers.py with author nesting
-- [ ] T011 UserBookSerializer in books/serializers.py with book details, status handling
-- [ ] T012 ReviewSerializer in books/serializers.py with book/user validation
+- [X] T009 [P] AuthorSerializer in books/serializers.py for nested book relationships
+- [X] T010 [P] BookSerializer in books/serializers.py with author nesting
+- [X] T011 UserBookSerializer in books/serializers.py with book details, status handling
+- [X] T012 ReviewSerializer in books/serializers.py with book/user validation
 
 ## Phase 3.5: API ViewSets & Filtering (books/ app)
-- [ ] T013 [P] AuthorViewSet in books/views.py with list/retrieve operations, SearchFilter configuration
-- [ ] T014 UserBookViewSet in books/views.py with CRUD, DjangoFilterBackend configuration for status/genre filtering
-- [ ] T015 ReviewViewSet in books/views.py with user-scoped CRUD operations
-- [ ] T016 Configure filter backends and search_fields for all ViewSets (NO custom filtering code - use DRF built-ins only)
+- [X] T013 [P] AuthorViewSet in books/views.py with list/retrieve operations, SearchFilter configuration
+- [X] T014 UserBookViewSet in books/views.py with CRUD, DjangoFilterBackend configuration for status/genre filtering
+- [X] T015 ReviewViewSet in books/views.py with user-scoped CRUD operations
+- [X] T016 Configure filter backends and search_fields for all ViewSets (NO custom filtering code - use DRF built-ins only)
 
 ## Phase 3.6: URL Routing & API Configuration
-- [ ] T017 books/urls.py router configuration for all ViewSets
-- [ ] T018 Update mybooks/api_urls.py to include books.urls
-- [ ] T019 Configure API versioning removal (use /api/ instead of /api/v1/)
+- [X] T017 books/urls.py router configuration for all ViewSets
+- [X] T018 Update mybooks/api_urls.py to include books.urls
+- [X] T019 Configure API versioning removal (use /api/ instead of /api/v1/)
 
 ## Phase 3.7: Authentication & Permissions
-- [ ] T020 Configure TokenAuthentication in mybooks/settings.py REST_FRAMEWORK settings (generic/project-wide)
-- [ ] T021 [P] Add IsAuthenticated permissions to all ViewSets in books/views.py (book-specific)
-- [ ] T022 [P] Add user-scoped querysets to UserBook and Review ViewSets in books/views.py (filter by request.user)
-- [ ] T023 Configure OAuth2 settings for django-oauth-toolkit integration in mybooks/settings.py (generic/project-wide)
+- [X] T020 Configure TokenAuthentication in mybooks/settings.py REST_FRAMEWORK settings (generic/project-wide)
+- [X] T021 [P] Add IsAuthenticated permissions to all ViewSets in books/views.py (book-specific)
+- [X] T022 [P] Add user-scoped querysets to UserBook and Review ViewSets in books/views.py (filter by request.user)
+- [X] T023 Configure OAuth2 settings for django-oauth-toolkit integration in mybooks/settings.py (generic/project-wide)
 
 ## Phase 3.8: Business Logic & Validation
-- [ ] T024 Add reading status transition logic to UserBookSerializer save method
-- [ ] T025 [P] Add duplicate book/review validation in serializers
-- [ ] T026 [P] Add rating range validation (1-5) to ReviewSerializer
-- [ ] T027 Author get_or_create logic for nested book creation
+- [X] T024 Add reading status transition logic to UserBookSerializer save method
+- [X] T025 [P] Add duplicate book/review validation in serializers
+- [X] T026 [P] Add rating range validation (1-5) to ReviewSerializer
+- [X] T027 Author get_or_create logic for nested book creation
 
 ## Phase 3.9: Integration & Polish
-- [ ] T028 Configure drf-spectacular schema generation and UI endpoints
-- [ ] T029 [P] Add pagination settings for list views in mybooks/settings.py
-- [ ] T030 Manual testing using quickstart.md scenarios (6 validation scenarios)
+- [X] T028 Configure drf-spectacular schema generation and UI endpoints
+- [X] T029 [P] Add pagination settings for list views in mybooks/settings.py
+- [ ] T030 API testing using HTTPie collections (6 validation scenarios from quickstart.md)
+  - Create HTTPie collection files in specs/001-extend-the-application/testing/
+  - Automated test setup with authentication token creation
+  - Version-controlled API test scenarios for CI/CD integration
 
 ## Dependencies
 - T001-T003 (Setup) before all other tasks

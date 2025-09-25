@@ -1,0 +1,2095 @@
+openapi: 3.0.3
+info:
+  title: Book Collection Management API
+  version: 1.0.0
+  description: A comprehensive API for managing personal book collections with reading
+    status tracking, reviews, and recommendations.
+paths:
+  /api/users/:
+    post:
+      operationId: users_create
+      description: Create a new user account
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - write
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    get:
+      operationId: users_list
+      description: List all users with filtering and search capabilities
+      parameters:
+      - in: query
+        name: date_joined__gte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: date_joined__lte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: groups__name__icontains
+        schema:
+          type: string
+      - in: query
+        name: is_active
+        schema:
+          type: boolean
+      - in: query
+        name: is_staff
+        schema:
+          type: boolean
+      - in: query
+        name: is_superuser
+        schema:
+          type: boolean
+      - in: query
+        name: last_login__gte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: last_login__lte
+        schema:
+          type: string
+          format: date-time
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - users
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserList'
+          description: ''
+  /api/users/recent/:
+    get:
+      operationId: users_recent_retrieve
+      description: Get the 10 most recently joined users in the system
+      tags:
+      - users
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Recently joined users
+                properties:
+                  count:
+                    type: integer
+                    description: Number of recent users
+                  recent_users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                    description: List of recently joined users
+          description: ''
+  /api/users/stats/:
+    get:
+      operationId: users_stats_retrieve
+      description: Get comprehensive user statistics including counts by status and
+        permissions
+      tags:
+      - users
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                description: User statistics across the system
+                properties:
+                  total_users:
+                    type: integer
+                    description: Total number of users
+                  active_users:
+                    type: integer
+                    description: Number of active users
+                  inactive_users:
+                    type: integer
+                    description: Number of inactive users
+                  staff_users:
+                    type: integer
+                    description: Number of staff users
+                  superusers:
+                    type: integer
+                    description: Number of superusers
+          description: ''
+  /api/users/{id}/:
+    patch:
+      operationId: users_partial_update
+      description: Partially update user information
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - write
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: users_update
+      description: Update user information
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - write
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    get:
+      operationId: users_retrieve
+      description: Get detailed information about a specific user
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - read
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDetail'
+          description: ''
+    delete:
+      operationId: users_destroy
+      description: Delete a user account
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - write
+      responses:
+        '204':
+          description: No response body
+  /api/groups/:
+    get:
+      operationId: groups_list
+      description: List all groups with filtering and search capabilities
+      parameters:
+      - in: query
+        name: name
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - groups
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - groups
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedGroupList'
+          description: ''
+  /api/groups/stats/:
+    get:
+      operationId: groups_stats_retrieve
+      description: Get group statistics.
+      tags:
+      - groups
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - groups
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: ''
+  /api/groups/{id}/:
+    get:
+      operationId: groups_retrieve
+      description: Get detailed information about a specific group
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this group.
+        required: true
+      tags:
+      - groups
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - groups
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Group'
+          description: ''
+  /api/groups/{id}/users/:
+    get:
+      operationId: groups_users_retrieve
+      description: Get all users that belong to this group
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this group.
+        required: true
+      tags:
+      - groups
+      security:
+      - tokenAuth: []
+      - oauth2:
+        - groups
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Users in the specified group
+                properties:
+                  group:
+                    type: string
+                    description: Group name
+                  user_count:
+                    type: integer
+                    description: Number of users in group
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+                    description: List of users in this group
+          description: ''
+  /api/books/:
+    post:
+      operationId: books_create
+      description: Add a book to user's collection
+      tags:
+      - books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBook'
+          description: ''
+    get:
+      operationId: books_list
+      description: List books in user's personal collection with filtering
+      parameters:
+      - in: query
+        name: book__author__name__icontains
+        schema:
+          type: string
+      - in: query
+        name: book__genre
+        schema:
+          type: string
+          enum:
+          - art
+          - biography
+          - business
+          - chick_lit
+          - childrens
+          - christian
+          - classics
+          - comics
+          - contemporary
+          - cookbooks
+          - crime
+          - ebooks
+          - fantasy
+          - fiction
+          - gay_and_lesbian
+          - graphic_novels
+          - historical_fiction
+          - history
+          - horror
+          - humor_and_comedy
+          - manga
+          - memoir
+          - music
+          - mystery
+          - nonfiction
+          - paranormal
+          - philosophy
+          - poetry
+          - psychology
+          - religion
+          - romance
+          - science
+          - science_fiction
+          - self_help
+          - spirituality
+          - sports
+          - suspense
+          - thriller
+          - travel
+          - young_adult
+        description: |-
+          * `art` - Art
+          * `biography` - Biography
+          * `business` - Business
+          * `chick_lit` - Chick Lit
+          * `childrens` - Children's
+          * `christian` - Christian
+          * `classics` - Classics
+          * `comics` - Comics
+          * `contemporary` - Contemporary
+          * `cookbooks` - Cookbooks
+          * `crime` - Crime
+          * `ebooks` - Ebooks
+          * `fantasy` - Fantasy
+          * `fiction` - Fiction
+          * `gay_and_lesbian` - Gay and Lesbian
+          * `graphic_novels` - Graphic Novels
+          * `historical_fiction` - Historical Fiction
+          * `history` - History
+          * `horror` - Horror
+          * `humor_and_comedy` - Humor and Comedy
+          * `manga` - Manga
+          * `memoir` - Memoir
+          * `music` - Music
+          * `mystery` - Mystery
+          * `nonfiction` - Nonfiction
+          * `paranormal` - Paranormal
+          * `philosophy` - Philosophy
+          * `poetry` - Poetry
+          * `psychology` - Psychology
+          * `religion` - Religion
+          * `romance` - Romance
+          * `science` - Science
+          * `science_fiction` - Science Fiction
+          * `self_help` - Self Help
+          * `suspense` - Suspense
+          * `spirituality` - Spirituality
+          * `sports` - Sports
+          * `thriller` - Thriller
+          * `travel` - Travel
+          * `young_adult` - Young Adult
+      - in: query
+        name: date_added__gte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: date_added__lte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: date_finished__gte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: date_finished__lte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: date_started__gte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: date_started__lte
+        schema:
+          type: string
+          format: date-time
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: reading_status
+        schema:
+          type: string
+          enum:
+          - dropped
+          - finished
+          - reading
+          - want_to_read
+        description: |-
+          * `want_to_read` - Want to Read
+          * `reading` - Reading
+          * `finished` - Finished
+          * `dropped` - Dropped
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - books
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserBookList'
+          description: ''
+  /api/books/by_status/:
+    get:
+      operationId: books_by_status_retrieve
+      description: Get books grouped by reading status (want_to_read, reading, read)
+      tags:
+      - books
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Books grouped by reading status
+                properties:
+                  want_to_read:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      books:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserBook'
+                  reading:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      books:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserBook'
+                  read:
+                    type: object
+                    properties:
+                      count:
+                        type: integer
+                      books:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/UserBook'
+          description: ''
+  /api/books/recommendations/:
+    get:
+      operationId: books_recommendations_retrieve
+      description: Get book recommendations based on user's reading history and preferences
+      tags:
+      - books
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Book recommendations based on user's reading history
+                properties:
+                  count:
+                    type: integer
+                    description: Number of recommendations
+                  recommendations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Book'
+                    description: Recommended books
+          description: ''
+  /api/books/{id}/:
+    patch:
+      operationId: books_partial_update
+      description: Partially update book information in collection
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user book.
+        required: true
+      tags:
+      - books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserBookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserBookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserBookRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBook'
+          description: ''
+    put:
+      operationId: books_update
+      description: Update reading status and notes for a book
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user book.
+        required: true
+      tags:
+      - books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBook'
+          description: ''
+    get:
+      operationId: books_retrieve
+      description: Get detailed information about a book in user's collection
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user book.
+        required: true
+      tags:
+      - books
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserBookDetail'
+          description: ''
+    delete:
+      operationId: books_destroy
+      description: Remove a book from user's collection
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user book.
+        required: true
+      tags:
+      - books
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/authors/:
+    get:
+      operationId: authors_list
+      description: List all authors with filtering and search capabilities
+      parameters:
+      - in: query
+        name: name
+        schema:
+          type: string
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - authors
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAuthorList'
+          description: ''
+  /api/authors/{id}/:
+    get:
+      operationId: authors_retrieve
+      description: Get detailed information about a specific author including books
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this author.
+        required: true
+      tags:
+      - authors
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthorDetail'
+          description: ''
+  /api/reviews/:
+    post:
+      operationId: reviews_create
+      description: Create a new book review
+      tags:
+      - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+    get:
+      operationId: reviews_list
+      description: List user's book reviews with filtering and search
+      parameters:
+      - in: query
+        name: book__author__name__icontains
+        schema:
+          type: string
+      - in: query
+        name: book__genre
+        schema:
+          type: string
+          enum:
+          - art
+          - biography
+          - business
+          - chick_lit
+          - childrens
+          - christian
+          - classics
+          - comics
+          - contemporary
+          - cookbooks
+          - crime
+          - ebooks
+          - fantasy
+          - fiction
+          - gay_and_lesbian
+          - graphic_novels
+          - historical_fiction
+          - history
+          - horror
+          - humor_and_comedy
+          - manga
+          - memoir
+          - music
+          - mystery
+          - nonfiction
+          - paranormal
+          - philosophy
+          - poetry
+          - psychology
+          - religion
+          - romance
+          - science
+          - science_fiction
+          - self_help
+          - spirituality
+          - sports
+          - suspense
+          - thriller
+          - travel
+          - young_adult
+        description: |-
+          * `art` - Art
+          * `biography` - Biography
+          * `business` - Business
+          * `chick_lit` - Chick Lit
+          * `childrens` - Children's
+          * `christian` - Christian
+          * `classics` - Classics
+          * `comics` - Comics
+          * `contemporary` - Contemporary
+          * `cookbooks` - Cookbooks
+          * `crime` - Crime
+          * `ebooks` - Ebooks
+          * `fantasy` - Fantasy
+          * `fiction` - Fiction
+          * `gay_and_lesbian` - Gay and Lesbian
+          * `graphic_novels` - Graphic Novels
+          * `historical_fiction` - Historical Fiction
+          * `history` - History
+          * `horror` - Horror
+          * `humor_and_comedy` - Humor and Comedy
+          * `manga` - Manga
+          * `memoir` - Memoir
+          * `music` - Music
+          * `mystery` - Mystery
+          * `nonfiction` - Nonfiction
+          * `paranormal` - Paranormal
+          * `philosophy` - Philosophy
+          * `poetry` - Poetry
+          * `psychology` - Psychology
+          * `religion` - Religion
+          * `romance` - Romance
+          * `science` - Science
+          * `science_fiction` - Science Fiction
+          * `self_help` - Self Help
+          * `suspense` - Suspense
+          * `spirituality` - Spirituality
+          * `sports` - Sports
+          * `thriller` - Thriller
+          * `travel` - Travel
+          * `young_adult` - Young Adult
+      - in: query
+        name: created_at__gte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: created_at__lte
+        schema:
+          type: string
+          format: date-time
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: rating
+        schema:
+          type: integer
+      - in: query
+        name: rating__gte
+        schema:
+          type: integer
+      - in: query
+        name: rating__lte
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - reviews
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedReviewList'
+          description: ''
+  /api/reviews/stats/:
+    get:
+      operationId: reviews_stats_retrieve
+      description: Get comprehensive statistics about user's reviews including totals,
+        averages, and rating distribution
+      tags:
+      - reviews
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                description: User's review statistics
+                properties:
+                  total_reviews:
+                    type: integer
+                    description: Total number of reviews
+                  average_rating:
+                    type: number
+                    format: float
+                    description: Average rating across all reviews
+                  rating_distribution:
+                    type: object
+                    description: Distribution of ratings (1-5 stars)
+                    properties:
+                      '1':
+                        type: integer
+                      '2':
+                        type: integer
+                      '3':
+                        type: integer
+                      '4':
+                        type: integer
+                      '5':
+                        type: integer
+          description: ''
+  /api/reviews/{id}/:
+    patch:
+      operationId: reviews_partial_update
+      description: Partially update a book review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+    put:
+      operationId: reviews_update
+      description: Update a book review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+        required: true
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+    get:
+      operationId: reviews_retrieve
+      description: Get detailed information about a specific review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - reviews
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+          description: ''
+    delete:
+      operationId: reviews_destroy
+      description: Delete a book review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - reviews
+      security:
+      - tokenAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/browse/:
+    get:
+      operationId: browse_list
+      description: Browse all books in the system with filtering and search
+      parameters:
+      - in: query
+        name: author__name__icontains
+        schema:
+          type: string
+      - in: query
+        name: created_at__gte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: created_at__lte
+        schema:
+          type: string
+          format: date-time
+      - in: query
+        name: genre
+        schema:
+          type: string
+          enum:
+          - art
+          - biography
+          - business
+          - chick_lit
+          - childrens
+          - christian
+          - classics
+          - comics
+          - contemporary
+          - cookbooks
+          - crime
+          - ebooks
+          - fantasy
+          - fiction
+          - gay_and_lesbian
+          - graphic_novels
+          - historical_fiction
+          - history
+          - horror
+          - humor_and_comedy
+          - manga
+          - memoir
+          - music
+          - mystery
+          - nonfiction
+          - paranormal
+          - philosophy
+          - poetry
+          - psychology
+          - religion
+          - romance
+          - science
+          - science_fiction
+          - self_help
+          - spirituality
+          - sports
+          - suspense
+          - thriller
+          - travel
+          - young_adult
+        description: |-
+          * `art` - Art
+          * `biography` - Biography
+          * `business` - Business
+          * `chick_lit` - Chick Lit
+          * `childrens` - Children's
+          * `christian` - Christian
+          * `classics` - Classics
+          * `comics` - Comics
+          * `contemporary` - Contemporary
+          * `cookbooks` - Cookbooks
+          * `crime` - Crime
+          * `ebooks` - Ebooks
+          * `fantasy` - Fantasy
+          * `fiction` - Fiction
+          * `gay_and_lesbian` - Gay and Lesbian
+          * `graphic_novels` - Graphic Novels
+          * `historical_fiction` - Historical Fiction
+          * `history` - History
+          * `horror` - Horror
+          * `humor_and_comedy` - Humor and Comedy
+          * `manga` - Manga
+          * `memoir` - Memoir
+          * `music` - Music
+          * `mystery` - Mystery
+          * `nonfiction` - Nonfiction
+          * `paranormal` - Paranormal
+          * `philosophy` - Philosophy
+          * `poetry` - Poetry
+          * `psychology` - Psychology
+          * `religion` - Religion
+          * `romance` - Romance
+          * `science` - Science
+          * `science_fiction` - Science Fiction
+          * `self_help` - Self Help
+          * `suspense` - Suspense
+          * `spirituality` - Spirituality
+          * `sports` - Sports
+          * `thriller` - Thriller
+          * `travel` - Travel
+          * `young_adult` - Young Adult
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - browse
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBookList'
+          description: ''
+  /api/browse/{id}/:
+    get:
+      operationId: browse_retrieve
+      description: Get detailed information about a specific book
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this book.
+        required: true
+      tags:
+      - browse
+      security:
+      - tokenAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+          description: ''
+components:
+  schemas:
+    Author:
+      type: object
+      description: Serializer for Author model with nested book relationships.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          description: Author's full name
+          maxLength: 255
+        image:
+          type: string
+          format: uri
+          nullable: true
+          description: Author photo
+        biography:
+          type: string
+          description: Author biographical information
+        books_count:
+          type: integer
+          description: Return the number of books by this author.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - books_count
+      - created_at
+      - id
+      - name
+      - updated_at
+    AuthorDetail:
+      type: object
+      description: Detailed serializer for Author with list of books.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          description: Author's full name
+          maxLength: 255
+        image:
+          type: string
+          format: uri
+          nullable: true
+          description: Author photo
+        biography:
+          type: string
+          description: Author biographical information
+        books_count:
+          type: integer
+          description: Return the number of books by this author.
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+        books:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+          readOnly: true
+      required:
+      - books
+      - books_count
+      - created_at
+      - id
+      - name
+      - updated_at
+    AuthorRequest:
+      type: object
+      description: Serializer for Author model with nested book relationships.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          description: Author's full name
+          maxLength: 255
+        image:
+          type: string
+          format: binary
+          nullable: true
+          description: Author photo
+        biography:
+          type: string
+          description: Author biographical information
+      required:
+      - name
+    Book:
+      type: object
+      description: Serializer for Book model with author nesting.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          description: Book title
+          maxLength: 255
+        tagline:
+          type: string
+          description: Brief book description
+          maxLength: 500
+        description:
+          type: string
+          description: Detailed book description
+        image:
+          type: string
+          format: uri
+          nullable: true
+          description: Book cover image
+        genre:
+          $ref: '#/components/schemas/GenreEnum'
+        author:
+          allOf:
+          - $ref: '#/components/schemas/Author'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - created_at
+      - genre
+      - id
+      - title
+      - updated_at
+    BookRequest:
+      type: object
+      description: Serializer for Book model with author nesting.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          description: Book title
+          maxLength: 255
+        tagline:
+          type: string
+          description: Brief book description
+          maxLength: 500
+        description:
+          type: string
+          description: Detailed book description
+        image:
+          type: string
+          format: binary
+          nullable: true
+          description: Book cover image
+        genre:
+          $ref: '#/components/schemas/GenreEnum'
+        author_name:
+          type: string
+          writeOnly: true
+          minLength: 1
+          description: Author name for creating/getting author
+      required:
+      - author_name
+      - genre
+      - title
+    GenreEnum:
+      enum:
+      - art
+      - biography
+      - business
+      - chick_lit
+      - childrens
+      - christian
+      - classics
+      - comics
+      - contemporary
+      - cookbooks
+      - crime
+      - ebooks
+      - fantasy
+      - fiction
+      - gay_and_lesbian
+      - graphic_novels
+      - historical_fiction
+      - history
+      - horror
+      - humor_and_comedy
+      - manga
+      - memoir
+      - music
+      - mystery
+      - nonfiction
+      - paranormal
+      - philosophy
+      - poetry
+      - psychology
+      - religion
+      - romance
+      - science
+      - science_fiction
+      - self_help
+      - suspense
+      - spirituality
+      - sports
+      - thriller
+      - travel
+      - young_adult
+      type: string
+      description: |-
+        * `art` - Art
+        * `biography` - Biography
+        * `business` - Business
+        * `chick_lit` - Chick Lit
+        * `childrens` - Children's
+        * `christian` - Christian
+        * `classics` - Classics
+        * `comics` - Comics
+        * `contemporary` - Contemporary
+        * `cookbooks` - Cookbooks
+        * `crime` - Crime
+        * `ebooks` - Ebooks
+        * `fantasy` - Fantasy
+        * `fiction` - Fiction
+        * `gay_and_lesbian` - Gay and Lesbian
+        * `graphic_novels` - Graphic Novels
+        * `historical_fiction` - Historical Fiction
+        * `history` - History
+        * `horror` - Horror
+        * `humor_and_comedy` - Humor and Comedy
+        * `manga` - Manga
+        * `memoir` - Memoir
+        * `music` - Music
+        * `mystery` - Mystery
+        * `nonfiction` - Nonfiction
+        * `paranormal` - Paranormal
+        * `philosophy` - Philosophy
+        * `poetry` - Poetry
+        * `psychology` - Psychology
+        * `religion` - Religion
+        * `romance` - Romance
+        * `science` - Science
+        * `science_fiction` - Science Fiction
+        * `self_help` - Self Help
+        * `suspense` - Suspense
+        * `spirituality` - Spirituality
+        * `sports` - Sports
+        * `thriller` - Thriller
+        * `travel` - Travel
+        * `young_adult` - Young Adult
+    Group:
+      type: object
+      description: Serializer for Group model.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 150
+        user_count:
+          type: integer
+          description: Return number of users in this group.
+          readOnly: true
+      required:
+      - id
+      - name
+      - user_count
+    PaginatedAuthorList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Author'
+    PaginatedBookList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Book'
+    PaginatedGroupList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
+    PaginatedReviewList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Review'
+    PaginatedUserBookList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserBook'
+    PaginatedUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+    PatchedReviewRequest:
+      type: object
+      description: Serializer for Review model with book/user validation.
+      properties:
+        book_id:
+          type: integer
+          writeOnly: true
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+          description: Star rating from 1-5
+        text:
+          type: string
+          description: Review text content
+    PatchedUserBookRequest:
+      type: object
+      description: Serializer for UserBook model with book details and status handling.
+      properties:
+        book_id:
+          type: integer
+          writeOnly: true
+        reading_status:
+          $ref: '#/components/schemas/ReadingStatusEnum'
+        title:
+          type: string
+          writeOnly: true
+          minLength: 1
+        author_name:
+          type: string
+          writeOnly: true
+          minLength: 1
+        genre:
+          allOf:
+          - $ref: '#/components/schemas/GenreEnum'
+          writeOnly: true
+        tagline:
+          type: string
+          writeOnly: true
+        description:
+          type: string
+          writeOnly: true
+    PatchedUserRequest:
+      type: object
+      description: Serializer for User model with core fields.
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+    ReadingStatusEnum:
+      enum:
+      - want_to_read
+      - reading
+      - finished
+      - dropped
+      type: string
+      description: |-
+        * `want_to_read` - Want to Read
+        * `reading` - Reading
+        * `finished` - Finished
+        * `dropped` - Dropped
+    Review:
+      type: object
+      description: Serializer for Review model with book/user validation.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        book:
+          allOf:
+          - $ref: '#/components/schemas/Book'
+          readOnly: true
+        user:
+          type: string
+          readOnly: true
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+          description: Star rating from 1-5
+        text:
+          type: string
+          description: Review text content
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - book
+      - created_at
+      - id
+      - rating
+      - updated_at
+      - user
+    ReviewRequest:
+      type: object
+      description: Serializer for Review model with book/user validation.
+      properties:
+        book_id:
+          type: integer
+          writeOnly: true
+        rating:
+          type: integer
+          maximum: 5
+          minimum: 1
+          description: Star rating from 1-5
+        text:
+          type: string
+          description: Review text content
+      required:
+      - book_id
+      - rating
+    User:
+      type: object
+      description: Serializer for User model with core fields.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        full_name:
+          type: string
+          description: Return user's full name.
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+      required:
+      - date_joined
+      - full_name
+      - id
+      - username
+    UserBook:
+      type: object
+      description: Serializer for UserBook model with book details and status handling.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        book:
+          allOf:
+          - $ref: '#/components/schemas/Book'
+          readOnly: true
+        reading_status:
+          $ref: '#/components/schemas/ReadingStatusEnum'
+        date_added:
+          type: string
+          format: date-time
+          readOnly: true
+        date_started:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When user started reading
+        date_finished:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When user finished reading
+      required:
+      - book
+      - date_added
+      - date_finished
+      - date_started
+      - id
+    UserBookDetail:
+      type: object
+      description: Detailed serializer for UserBook including review if exists.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        book:
+          allOf:
+          - $ref: '#/components/schemas/Book'
+          readOnly: true
+        reading_status:
+          $ref: '#/components/schemas/ReadingStatusEnum'
+        date_added:
+          type: string
+          format: date-time
+          readOnly: true
+        date_started:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When user started reading
+        date_finished:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          description: When user finished reading
+        review:
+          type: object
+          additionalProperties: {}
+          nullable: true
+          description: Get user's review for this book if it exists.
+          readOnly: true
+      required:
+      - book
+      - date_added
+      - date_finished
+      - date_started
+      - id
+      - review
+    UserBookRequest:
+      type: object
+      description: Serializer for UserBook model with book details and status handling.
+      properties:
+        book_id:
+          type: integer
+          writeOnly: true
+        reading_status:
+          $ref: '#/components/schemas/ReadingStatusEnum'
+        title:
+          type: string
+          writeOnly: true
+          minLength: 1
+        author_name:
+          type: string
+          writeOnly: true
+          minLength: 1
+        genre:
+          allOf:
+          - $ref: '#/components/schemas/GenreEnum'
+          writeOnly: true
+        tagline:
+          type: string
+          writeOnly: true
+        description:
+          type: string
+          writeOnly: true
+    UserDetail:
+      type: object
+      description: Detailed serializer for User with additional information.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        full_name:
+          type: string
+          description: Return user's full name.
+          readOnly: true
+        date_joined:
+          type: string
+          format: date-time
+          readOnly: true
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+        group_count:
+          type: integer
+          description: Return number of groups user belongs to.
+          readOnly: true
+        last_login:
+          type: string
+          format: date-time
+          nullable: true
+        is_staff:
+          type: boolean
+          title: Staff status
+          description: Designates whether the user can log into this admin site.
+        is_superuser:
+          type: boolean
+          title: Superuser status
+          description: Designates that this user has all permissions without explicitly
+            assigning them.
+      required:
+      - date_joined
+      - full_name
+      - group_count
+      - id
+      - username
+    UserRequest:
+      type: object
+      description: Serializer for User model with core fields.
+      properties:
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+        email:
+          type: string
+          format: email
+          title: Email address
+          maxLength: 254
+        first_name:
+          type: string
+          maxLength: 150
+        last_name:
+          type: string
+          maxLength: 150
+        is_active:
+          type: boolean
+          title: Active
+          description: Designates whether this user should be treated as active. Unselect
+            this instead of deleting accounts.
+      required:
+      - username
+  securitySchemes:
+    oauth2:
+      type: oauth2
+      flows: {}
+    tokenAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: Token-based authentication with required prefix "Token"
+servers:
+- url: http://localhost:8080/
+  description: Development server

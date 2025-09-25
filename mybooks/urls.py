@@ -3,24 +3,31 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path, re_path
 from django.views.static import serve
+from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from oauth2_provider import urls as oauth2_urls
 from oauth_dcr.views import DynamicClientRegistrationView
 from rest_framework.routers import DefaultRouter
 
-from .api import UserViewSet, GroupViewSet
+from mybooks.views import GroupViewSet, UserViewSet
 
-# Create DRF router and register ViewSets
+# DRF Router configuration for API endpoints
 router = DefaultRouter()
-router.register(r'users', UserViewSet)
-router.register(r'groups', GroupViewSet)
+router.register(r"users", UserViewSet, basename="user")
+router.register(r"groups", GroupViewSet, basename="group")
 
 urlpatterns = [
     path(r"health-check/", include("health_check.urls")),
-    # API
+    # Core API endpoints (users, groups)
     path("api/", include(router.urls)),
+    # Book Collection API endpoints
+    path("api/", include("books.urls")),
+    # API Documentation
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    # OAuth
     path("oauth/", include(oauth2_urls)),
     path("oauth/register/", DynamicClientRegistrationView.as_view(), name="oauth2_dcr"),
-    
     path(
         "manage/password_reset/",
         auth_views.PasswordResetView.as_view(extra_context={"site_header": admin.site.site_header}),

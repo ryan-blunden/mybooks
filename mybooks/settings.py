@@ -76,6 +76,8 @@ INSTALLED_APPS = [
     "oauth_dcr",
     "rest_framework",
     "rest_framework.authtoken",
+    "django_filters",
+    "drf_spectacular",
     "health_check",
     "health_check.db",
     "health_check.storage",
@@ -381,27 +383,62 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated", "oauth2_provider.contrib.rest_framework.permissions.TokenHasScope"),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    # 'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',)
+    "DEFAULT_FILTER_BACKENDS": (
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.SearchFilter",
+        "rest_framework.filters.OrderingFilter",
+    ),
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 20,
 }
 
 OAUTH2_PROVIDER = {
     # this is the list of available scopes
-    "SCOPES": {"read": "Read scope", "write": "Write scope", "groups": "Access to your groups"}
+    "ALLOWED_SCHEMES": ["http", "https"] if DEBUG else ["https"],
+    "SCOPES": {"read": "Read scope", "write": "Write scope", "groups": "Access to your groups"},
+}
+
+OAUTH_DCR_SETTINGS = {
+    # Grant types allowed for dynamic registration (RFC 7591 safe defaults)
+    "ALLOWED_GRANT_TYPES": [
+        "authorization_code",  # Safe for open registration
+        "refresh_token",  # Safe - used for token renewal
+    ],
+    # Require HTTPS for redirect URIs in production (default: True in production)
+    "REQUIRE_HTTPS_REDIRECT_URIS": True if (DEBUG is False or ENV == "production") else False,
 }
 
 CORS_ORIGIN_ALLOW_ALL = True
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "My Books API",
-    "VERSION": "0.1.0",
+    "TITLE": "Book Collection Management API",
+    "DESCRIPTION": "A comprehensive API for managing personal book collections with reading status tracking, reviews, and recommendations.",
+    "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
-    "OAS_VERSION": "3.1.0",
+    "OAS_VERSION": "3.0.3",  # Use 3.0.3 for better compatibility
     "SERVERS": [
         {
             "url": "http://localhost:8080/",
-            "description": "MyBooks local server",
+            "description": "Development server",
         },
     ],
+    "SCHEMA_PATH_PREFIX": "/api/",
+    "DEFAULT_GENERATOR_CLASS": "drf_spectacular.generators.SchemaGenerator",
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+    "SERVE_AUTHENTICATION": None,
+    "SWAGGER_UI_SETTINGS": {
+        "deepLinking": True,
+        "persistAuthorization": True,
+        "displayOperationId": True,
+    },
+    "PREPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.preprocess_exclude_path_format",
+    ],
+    "POSTPROCESSING_HOOKS": [
+        "drf_spectacular.hooks.postprocess_schema_enums",
+    ],
+    "COMPONENT_SPLIT_REQUEST": True,
+    "SORT_OPERATIONS": False,
 }
 
 
