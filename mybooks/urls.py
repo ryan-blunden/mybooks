@@ -6,30 +6,31 @@ from django.views.static import serve
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from oauth2_provider import urls as oauth2_urls
 from oauth_dcr.views import DynamicClientRegistrationView
-from rest_framework.routers import DefaultRouter
 
-from mybooks.views import GroupViewSet, UserViewSet, oauth_metadata
-
-# DRF Router configuration for API endpoints
-router = DefaultRouter()
-router.register(r"users", UserViewSet, basename="user")
-router.register(r"groups", GroupViewSet, basename="group")
+from mybooks import core_views, oauth_views
 
 urlpatterns = [
     path(r"health-check/", include("health_check.urls")),
-    path(".well-known/oauth-authorization-server", oauth_metadata),
-    path("oauth/.well-known/oauth-authorization-server", oauth_metadata),
+    path("signin/", core_views.signin, name="signin"),
+    path("signout/", core_views.signout, name="signout"),
     # Core API endpoints (users, groups)
-    path("api/", include(router.urls)),
+    path("api/", include("mybooks.api_urls")),
     # Book Collection API endpoints
     path("api/", include("books.urls")),
     # API Documentation
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
-    # OAuth
+    # Custom app views
+    path("", core_views.home, name="home"),
+    path("oauth-flow-test/", oauth_views.oauth_flow_test, name="oauth-flow-test"),
+    path("oauth-flow-register/", oauth_views.oauth_flow_register_app, name="oauth-flow-register"),
+    path("oauth-flow-authorize/", oauth_views.authorize_app, name="oauth-flow-authorize"),
+    path("oauth-flow-tokens/", oauth_views.oauth_exchange_code_for_tokens, name="oauth-flow-tokens"),
     path("oauth/", include(oauth2_urls)),
     path("oauth/register/", DynamicClientRegistrationView.as_view(), name="oauth2_dcr"),
+    path(".well-known/oauth-authorization-server", oauth_views.oauth_metadata),
+    path("oauth/.well-known/oauth-authorization-server", oauth_views.oauth_metadata),
     path(
         "manage/password_reset/",
         auth_views.PasswordResetView.as_view(extra_context={"site_header": admin.site.site_header}),

@@ -10,9 +10,10 @@
       "console": "integratedTerminal",
       "django": true,
       "justMyCode": false,
+      "envFile": "${workspaceFolder}/.env",
       "env": {
         "PYTHONPATH": "${workspaceFolder}",
-        // "DOPPLER_ENV": "1"
+        "DOPPLER_ENV": "1"
       }
     },
     {
@@ -24,8 +25,9 @@
       "console": "integratedTerminal",
       "django": true,
       "justMyCode": false,
+      "envFile": "${workspaceFolder}/.env",
       "env": {
-        // "DOPPLER_ENV": "1"
+        "DOPPLER_ENV": "1"
       }
     },
     {
@@ -37,8 +39,9 @@
       "console": "integratedTerminal",
       "django": true,
       "justMyCode": false,
+      "envFile": "${workspaceFolder}/.env",
       "env": {
-        // "DOPPLER_ENV": "1"
+        "DOPPLER_ENV": "1"
       }
     },
   ]

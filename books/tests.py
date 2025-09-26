@@ -2,10 +2,10 @@
 Comprehensive tests for Books API covering essential CRUD and search functionality.
 
 Tests all four main endpoints:
-- /api/books/ (UserBookViewSet) - User's personal book collection
-- /api/authors/ (AuthorViewSet) - Author discovery and information
+- /api/books/ (BookViewSet) - Catalog CRUD and discovery
+- /api/user-books/ (UserBookViewSet) - User's personal book collection
+- /api/authors/ (AuthorViewSet) - Author management
 - /api/reviews/ (ReviewViewSet) - User reviews and ratings
-- /api/browse/ (BookViewSet) - Browse all books in system
 
 AIDEV-NOTE: These tests focus on essential functionality only, following the golden rule
 of not modifying test files without permission. Tests cover CRUD operations, search,
@@ -126,9 +126,46 @@ class AuthorAPITestCase(BooksAPIBaseTestCase):
         self.assertEqual(len(response.data["results"]), 1)
         self.assertEqual(response.data["results"][0]["name"], "J.K. Rowling")
 
+    def test_create_author(self):
+        """Test creating a new author via the API."""
+        self.authenticate_user1()
+        url = reverse("author-list")
+        data = {"name": "Neil Gaiman", "biography": "Author of American Gods and Coraline."}
+
+        response = self.client.post(url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["name"], "Neil Gaiman")
+        self.assertTrue(Author.objects.filter(name="Neil Gaiman").exists())
+
+    def test_update_author(self):
+        """Test updating an existing author."""
+        self.authenticate_user1()
+        url = reverse("author-detail", kwargs={"pk": self.tolkien.pk})
+        data = {
+            "name": "J.R.R. Tolkien",
+            "biography": "Updated biography for Tolkien.",
+            "image": None,
+        }
+
+        response = self.client.put(url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["biography"], "Updated biography for Tolkien.")
+
+    def test_delete_author(self):
+        """Test deleting an author."""
+        self.authenticate_user1()
+        url = reverse("author-detail", kwargs={"pk": self.rowling.pk})
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Author.objects.filter(pk=self.rowling.pk).exists())
+
 
 class UserBookAPITestCase(BooksAPIBaseTestCase):
-    """Test UserBook API endpoints (/api/books/) - User's personal collection."""
+    """Test UserBook API endpoints (/api/user-books/) - User's personal collection."""
 
     def test_empty_collection_initially(self):
         """Test that user's collection is empty initially."""
@@ -353,8 +390,8 @@ class ReviewAPITestCase(BooksAPIBaseTestCase):
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
 
-class BookBrowseAPITestCase(BooksAPIBaseTestCase):
-    """Test Book Browse API endpoints (/api/browse/) - Browse all books in system."""
+class BookCatalogAPITestCase(BooksAPIBaseTestCase):
+    """Test Book Catalog API endpoints (/api/books/) - Shared catalog CRUD."""
 
     def test_browse_all_books(self):
         """Test browsing all books in the system."""
@@ -364,6 +401,64 @@ class BookBrowseAPITestCase(BooksAPIBaseTestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data["results"]), 3)  # hobbit, lotr, hp1
+
+    def test_create_book(self):
+        """Test creating a new catalog book."""
+        self.authenticate_user1()
+        url = reverse("book-list")
+        data = {
+            "title": "Good Omens",
+            "tagline": "The Nice and Accurate Prophecies of Agnes Nutter, Witch",
+            "description": "An angel and a demon team up to stop the apocalypse.",
+            "genre": "fantasy",
+            "author_name": "Neil Gaiman",
+        }
+
+        response = self.client.post(url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["title"], "Good Omens")
+        self.assertEqual(response.data["author"]["name"], "Neil Gaiman")
+        self.assertTrue(Book.objects.filter(title="Good Omens").exists())
+
+    def test_update_book(self):
+        """Test updating catalog metadata for a book."""
+        self.authenticate_user1()
+        url = reverse("book-detail", kwargs={"pk": self.hobbit.pk})
+        data = {
+            "title": "The Hobbit",
+            "tagline": "There and Back Again",
+            "description": "Updated description for The Hobbit.",
+            "genre": "fantasy",
+            "author_name": "J.R.R. Tolkien",
+        }
+
+        response = self.client.put(url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["tagline"], "There and Back Again")
+        self.assertEqual(response.data["description"], "Updated description for The Hobbit.")
+
+    def test_partial_update_book(self):
+        """Test partially updating catalog metadata."""
+        self.authenticate_user1()
+        url = reverse("book-detail", kwargs={"pk": self.lotr.pk})
+        data = {"description": "New description for LOTR."}
+
+        response = self.client.patch(url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["description"], "New description for LOTR.")
+
+    def test_delete_book(self):
+        """Test deleting a book from the catalog."""
+        self.authenticate_user1()
+        url = reverse("book-detail", kwargs={"pk": self.hp1.pk})
+
+        response = self.client.delete(url)
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Book.objects.filter(pk=self.hp1.pk).exists())
 
     def test_browse_book_details(self):
         """Test retrieving detailed information about a specific book."""

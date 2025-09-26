@@ -22,18 +22,18 @@ from .serializers import (
 @extend_schema_view(
     list=extend_schema(
         operation_id="list_authors_for_discovery",
-        summary="List all authors for book discovery",
-        description="Retrieve a paginated list of all authors in the book system for discovery and exploration purposes. This endpoint returns basic author information including their name, biography snippet, and total book count. Use this tool when you need to help users discover authors or browse the author catalog. Each author entry includes a book count to help users understand the author's presence in the system. The response is paginated and includes authors sorted alphabetically by name. This is a read-only endpoint that requires user authentication but does not filter by user's personal collection - it shows all authors in the system regardless of whether the user has their books in their collection.",
+        summary="List authors",
+        description="Retrieve a paginated list of all authors with search and ordering support.",
         parameters=[
             OpenApiParameter(
                 name="search",
-                description="Search authors by name or biography content. Performs case-insensitive text search across author names and biographical information. Use this to find specific authors or authors with particular expertise mentioned in their biography.",
+                description="Search authors by name or biography (case-insensitive).",
                 required=False,
                 type=str,
             ),
             OpenApiParameter(
                 name="ordering",
-                description="Sort the author list by specified field. Available options: 'name' (alphabetical), 'created_at' (newest first), '-name' (reverse alphabetical), '-created_at' (oldest first). Default is alphabetical by name.",
+                description="Sort results by 'name', '-name', 'created_at', or '-created_at'.",
                 required=False,
                 type=str,
                 enum=["name", "-name", "created_at", "-created_at"],
@@ -41,26 +41,68 @@ from .serializers import (
         ],
         tags=["authors"],
         responses={
-            200: OpenApiResponse(description="A paginated list of authors with basic info and book counts"),
+            200: OpenApiResponse(description="Paginated list of authors"),
         },
     ),
     retrieve=extend_schema(
         operation_id="get_author_complete_details",
-        summary="Get complete author information and book list",
-        description="Retrieve comprehensive information about a specific author by their unique author_id, including their complete biography and full list of books they've written. This endpoint returns detailed author information along with all books by this author available in the system. Use this tool when you need complete information about a specific author, such as when a user wants to explore all works by a particular author or needs detailed biographical information. The response includes the author's full biography, profile image if available, and a complete list of their books with titles, genres, and publication metadata. This does not show user-specific information like reading status - for that, use the user collection endpoints. Requires authentication and returns a 404 error if the author_id doesn't exist.",
+        summary="Retrieve author",
+        description="Get full author details and their books.",
         tags=["authors"],
         responses={
-            200: OpenApiResponse(description="Complete author details with full book catalog"),
-            404: OpenApiResponse(description="Author not found for the provided author_id"),
+            200: OpenApiResponse(description="Author details returned"),
+            404: OpenApiResponse(description="Author not found"),
+        },
+    ),
+    create=extend_schema(
+        operation_id="create_author",
+        summary="Create author",
+        description="Create a new author record for use when cataloging books.",
+        tags=["authors"],
+        responses={
+            201: OpenApiResponse(description="Author created"),
+            400: OpenApiResponse(description="Validation error"),
+        },
+    ),
+    update=extend_schema(
+        operation_id="update_author",
+        summary="Update author",
+        description="Replace all author fields with supplied data.",
+        tags=["authors"],
+        responses={
+            200: OpenApiResponse(description="Author updated"),
+            400: OpenApiResponse(description="Validation error"),
+            404: OpenApiResponse(description="Author not found"),
+        },
+    ),
+    partial_update=extend_schema(
+        operation_id="partial_update_author",
+        summary="Partially update author",
+        description="Update selected author fields without replacing the entire record.",
+        tags=["authors"],
+        responses={
+            200: OpenApiResponse(description="Author partially updated"),
+            400: OpenApiResponse(description="Validation error"),
+            404: OpenApiResponse(description="Author not found"),
+        },
+    ),
+    destroy=extend_schema(
+        operation_id="delete_author",
+        summary="Delete author",
+        description="Delete an author. Cascades to books that reference this author.",
+        tags=["authors"],
+        responses={
+            204: OpenApiResponse(description="Author deleted"),
+            404: OpenApiResponse(description="Author not found"),
         },
     ),
 )
-class AuthorViewSet(viewsets.ReadOnlyModelViewSet):
+class AuthorViewSet(viewsets.ModelViewSet):
     """
-    ViewSet for Author management with read-only operations.
+    Full CRUD ViewSet for managing authors in the catalog.
 
-    Authors are created automatically when adding books to the system.
-    This endpoint provides browsing and discovery of authors and their works.
+    Supports author discovery, direct author maintenance, and feeds
+    creation flows in the book catalog.
     """
 
     queryset = Author.objects.all()
@@ -110,7 +152,7 @@ class AuthorViewSet(viewsets.ReadOnlyModelViewSet):
                 ],
             ),
         ],
-        tags=["user-books", "collection"],
+        tags=["user-books"],
         responses={
             200: OpenApiResponse(description="Paginated list of books in user's personal collection with reading status"),
         },
@@ -119,7 +161,7 @@ class AuthorViewSet(viewsets.ReadOnlyModelViewSet):
         operation_id="add_book_to_user_collection",
         summary="Add a book to user's personal collection",
         description="Add a book to the authenticated user's personal collection with initial reading status. You can either reference an existing book by its book_id or create a completely new book entry if it doesn't exist in the system yet. When adding an existing book, provide the book_id and desired reading_status (defaults to 'want_to_read'). When creating a new book, provide complete book details including title, author information, and genre. Use this tool when a user wants to add a book to their personal library for tracking. The system prevents duplicate entries - each user can only have one instance of each book in their collection. The response includes the created UserBook relationship with book details and initial status. This creates a tracking relationship but doesn't modify the original book record if using an existing book. Requires user authentication.",
-        tags=["user-books", "collection"],
+        tags=["user-books"],
         responses={
             201: OpenApiResponse(description="Book successfully added to user's collection with initial reading status"),
             400: OpenApiResponse(description="Validation error, missing required fields, or book already exists in user's collection"),
@@ -129,7 +171,7 @@ class AuthorViewSet(viewsets.ReadOnlyModelViewSet):
         operation_id="get_book_from_user_collection",
         summary="Get detailed information about a book in user's collection",
         description="Retrieve comprehensive information about a specific book in the authenticated user's personal collection using the userbook_id (not the book_id). This endpoint returns the user's relationship to the book including current reading status, dates when the book was added/started/finished, combined with complete book details (title, author, description, genre) and any review the user has written for this book. Use this tool when you need detailed information about how a specific user relates to a specific book in their collection. The userbook_id is the unique identifier for the user-book relationship, which you can get from the list endpoint. This is different from the general book browsing endpoint - this shows user-specific tracking information. Returns 404 if the userbook_id doesn't exist or doesn't belong to the authenticated user. Requires user authentication.",
-        tags=["user-books", "collection"],
+        tags=["user-books"],
         responses={
             200: OpenApiResponse(description="Complete book details with user's reading status, dates, and review if available"),
             404: OpenApiResponse(description="UserBook relationship not found in authenticated user's collection"),
@@ -139,7 +181,7 @@ class AuthorViewSet(viewsets.ReadOnlyModelViewSet):
         operation_id="update_book_reading_status_in_collection",
         summary="Update reading status and tracking for book in user's collection",
         description="Update the reading status and tracking information for a book in the authenticated user's collection using the userbook_id. This endpoint allows changing the reading_status (want_to_read, reading, finished, dropped) and automatically manages related date fields based on status transitions. When status changes to 'reading', date_started is set to current time. When status changes to 'finished', date_finished is set to current time. Use this tool when a user progresses through reading a book or changes their intent for a book in their collection. The userbook_id identifies the specific user-book relationship to update. You cannot change which book this relationship points to - only the user's interaction with that book. The system validates status transitions and ensures dates remain consistent. Requires the complete object data (PUT method). PATCH method is not supported due to technical issues - use PUT for all updates. Requires user authentication and ownership of the userbook relationship.",
-        tags=["user-books", "collection"],
+        tags=["user-books"],
         responses={
             200: OpenApiResponse(description="Book reading status successfully updated with automatic date management"),
             400: OpenApiResponse(description="Validation error or invalid status transition"),
@@ -150,7 +192,7 @@ class AuthorViewSet(viewsets.ReadOnlyModelViewSet):
         operation_id="remove_book_from_user_collection",
         summary="Remove book from user's personal collection",
         description="Remove a book from the authenticated user's personal collection using the userbook_id. This operation deletes the user-book relationship and all associated tracking data (reading status, dates) but does NOT delete the book itself from the system - other users can still have this book in their collections and the book remains available for browsing and future additions. Use this tool when a user wants to completely remove a book from their personal library and stop tracking it. This action also removes any review the user has written for this book, as reviews are tied to the user-book relationship. The userbook_id identifies the specific relationship to delete. This is irreversible - if the user wants the book back in their collection, they'll need to add it again with a fresh tracking relationship. Requires user authentication and ownership of the userbook relationship.",
-        tags=["user-books", "collection"],
+        tags=["user-books"],
         responses={
             204: OpenApiResponse(description="Book and all tracking data successfully removed from user's collection"),
             404: OpenApiResponse(description="UserBook relationship not found in authenticated user's collection"),
@@ -298,18 +340,18 @@ class ReviewViewSet(viewsets.ModelViewSet):
 @extend_schema_view(
     list=extend_schema(
         operation_id="search_available_books",
-        summary="Browse and discover all books available in the system",
-        description="Browse through the complete catalog of all books available in the system for discovery and exploration purposes. This endpoint returns all books that exist in the system regardless of whether they are in any user's personal collection. Each book entry includes basic information like title, author name, genre, tagline, and creation date. Use this tool when users want to discover new books to potentially add to their collection, search for specific titles or authors, or explore the complete book catalog. This is different from the user collection endpoints - this shows the master catalog of all available books, not user-specific collection data. The response does not include user-specific information like reading status or personal notes. Results are paginated and sorted alphabetically by title. Use the book_id from this response to add books to a user's collection via the user_books endpoints. Requires user authentication for access.",
+        summary="List books",
+        description="Browse the full catalog of books with search, filtering, and ordering support.",
         parameters=[
             OpenApiParameter(
                 name="search",
-                description="Search books by title, description, tagline, or author name. Performs case-insensitive text search across book titles, descriptions, taglines, and author names. Use this to find specific books, books by particular authors, or books containing certain keywords in their descriptions.",
+                description="Search by title, description, tagline, or author name.",
                 required=False,
                 type=str,
             ),
             OpenApiParameter(
                 name="ordering",
-                description="Sort the book list by specified field. Available options: 'title' (alphabetical), 'created_at' (newest first), 'author__name' (by author name), or negative versions for reverse order ('-title', '-created_at', '-author__name'). Default is alphabetical by title.",
+                description="Sort results by 'title', 'created_at', or 'author__name' (prefix with '-' to reverse).",
                 required=False,
                 type=str,
                 enum=["title", "-title", "created_at", "-created_at", "author__name", "-author__name"],
@@ -317,34 +359,77 @@ class ReviewViewSet(viewsets.ModelViewSet):
         ],
         tags=["books"],
         responses={
-            200: OpenApiResponse(description="Paginated catalog of all books available for discovery and collection"),
+            200: OpenApiResponse(description="Paginated list of catalog books"),
         },
     ),
     retrieve=extend_schema(
         operation_id="get_book_catalog_details",
-        summary="Get comprehensive details about a specific book from the catalog",
-        description="Retrieve complete information about a specific book from the system catalog using the book_id. This endpoint returns detailed book information including title, complete description, author biographical information, genre, tagline, cover image, and publication metadata. Use this tool when you need comprehensive information about a book for display, decision-making about adding it to a collection, or providing detailed book information to users. This shows the master book record with all available metadata but does not include user-specific information like reading status or personal reviews - for that information, use the user collection endpoints. The book_id can be obtained from the book browsing endpoint or from user collection responses. Returns comprehensive author details embedded within the book information. Returns 404 if the book_id doesn't exist in the system. Requires user authentication.",
+        summary="Retrieve book",
+        description="Get full catalog details for a specific book.",
         tags=["books"],
         responses={
-            200: OpenApiResponse(description="Complete book information with author details and metadata"),
-            404: OpenApiResponse(description="Book not found in the system catalog"),
+            200: OpenApiResponse(description="Book details returned"),
+            404: OpenApiResponse(description="Book not found"),
+        },
+    ),
+    create=extend_schema(
+        operation_id="create_book",
+        summary="Create book",
+        description="Create a new catalog book. Provide core metadata and author name (created on demand).",
+        tags=["books"],
+        responses={
+            201: OpenApiResponse(description="Book created"),
+            400: OpenApiResponse(description="Validation error"),
+        },
+    ),
+    update=extend_schema(
+        operation_id="update_book",
+        summary="Update book",
+        description="Replace a book's metadata, including author reassignment if desired.",
+        tags=["books"],
+        responses={
+            200: OpenApiResponse(description="Book updated"),
+            400: OpenApiResponse(description="Validation error"),
+            404: OpenApiResponse(description="Book not found"),
+        },
+    ),
+    partial_update=extend_schema(
+        operation_id="partial_update_book",
+        summary="Partially update book",
+        description="Update selected book fields without replacing the entire record.",
+        tags=["books"],
+        responses={
+            200: OpenApiResponse(description="Book partially updated"),
+            400: OpenApiResponse(description="Validation error"),
+            404: OpenApiResponse(description="Book not found"),
+        },
+    ),
+    destroy=extend_schema(
+        operation_id="delete_book",
+        summary="Delete book",
+        description="Delete a catalog book. Cascades to user collections and reviews tied to the book.",
+        tags=["books"],
+        responses={
+            204: OpenApiResponse(description="Book deleted"),
+            404: OpenApiResponse(description="Book not found"),
         },
     ),
 )
-class BookViewSet(viewsets.ReadOnlyModelViewSet):
+class BookViewSet(viewsets.ModelViewSet):
     """
-    Read-only ViewSet for browsing and discovering books.
+    Full CRUD ViewSet for the shared book catalog.
 
-    Provides book discovery functionality for users to find books
-    they want to add to their personal collections.
+    Supports discovery, catalog maintenance, and integrations that
+    need to manage the universe of available books.
     """
 
+    # AIDEV-NOTE: Deleting catalog books cascades to user collections and reviews; confirm intent before bulk deletes.
     queryset = Book.objects.all()
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticatedOrTokenHasScope]
     required_scopes = ["read"]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    filterset_fields = ["genre"]
+    filterset_fields = ["genre", "author__name"]
     search_fields = ["title", "description", "tagline", "author__name"]
     ordering_fields = ["title", "created_at", "author__name"]
     ordering = ["title"]

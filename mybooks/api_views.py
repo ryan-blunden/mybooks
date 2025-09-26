@@ -1,6 +1,4 @@
-from django.conf import settings
 from django.contrib.auth.models import Group, User
-from django.urls import reverse
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiResponse, extend_schema, extend_schema_view
 from oauth2_provider.contrib.rest_framework import IsAuthenticatedOrTokenHasScope
@@ -8,26 +6,6 @@ from rest_framework import serializers, viewsets
 from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
-
-
-def oauth_metadata(request):
-    """Provide OAuth2 provider metadata."""
-    return {
-        "issuer": settings.SITE_URL,
-        "authorization_endpoint": request.build_absolute_uri(reverse("authorize")),
-        "token_endpoint": request.build_absolute_uri(reverse("token")),
-        "registration_endpoint": request.build_absolute_uri(reverse("oauth2_dcr")),
-        "userinfo_endpoint": request.build_absolute_uri(reverse("user-info")),
-        "introspection_endpoint": request.build_absolute_uri(reverse("introspect")),
-        "jwks_uri": request.build_absolute_uri(reverse("jwks-info")),
-        "revocation_endpoint": request.build_absolute_uri(reverse("revoke-token")),
-        "scopes_supported": ["read", "write", "users", "groups"],
-        "response_types_supported": ["code"],
-        "response_modes_supported": ["query"],
-        "grant_types_supported": ["authorization_code", "refresh_token"],
-        "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post", "none"],
-        "code_challenge_methods_supported": ["plain", "S256"],
-    }
 
 
 # Enhanced serializers with comprehensive field coverage

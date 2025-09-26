@@ -1641,6 +1641,7 @@ dependencies = [
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
     { name = "gunicorn" },
+    { name = "honcho" },
     { name = "logfire", extra = ["django", "sqlite3"] },
     { name = "psutil" },
     { name = "pydantic" },
@@ -1649,6 +1650,7 @@ dependencies = [
     { name = "python-dotenv" },
     { name = "raven" },
     { name = "requests" },
+    { name = "requests-oauthlib" },
     { name = "rust-just" },
     { name = "sentry-sdk", extra = ["django"] },
     { name = "streamlit" },
@@ -1693,6 +1695,7 @@ requires-dist = [
     { name = "djangorestframework", specifier = ">=3.16.1" },
     { name = "drf-spectacular", specifier = ">=0.28.0" },
     { name = "gunicorn", specifier = ">=23.0.0" },
+    { name = "honcho", specifier = ">=2.0.0" },
     { name = "logfire", extras = ["django", "sqlite3"], specifier = ">=4.9.0" },
     { name = "psutil", specifier = ">=6.1.1" },
     { name = "pydantic", specifier = ">=2.11.7" },
@@ -1701,6 +1704,7 @@ requires-dist = [
     { name = "python-dotenv", specifier = ">=1.1.0" },
     { name = "raven", specifier = ">=6.10.0" },
     { name = "requests", specifier = ">=2.32.5" },
+    { name = "requests-oauthlib", specifier = ">=2.0.0" },
     { name = "rust-just", specifier = ">=1.4.0" },
     { name = "sentry-sdk", extras = ["django"], specifier = ">=2.38.0" },
     { name = "streamlit", specifier = ">=1.50.0" },
@@ -2896,6 +2900,19 @@ wheels = [
 [package.optional-dependencies]
 socks = [
     { name = "pysocks" },
+]
+
+[[package]]
+name = "requests-oauthlib"
+version = "2.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "oauthlib" },
+    { name = "requests" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/42/f2/05f29bc3913aea15eb670be136045bf5c5bbf4b99ecb839da9b422bb2c85/requests-oauthlib-2.0.0.tar.gz", hash = "sha256:b3dffaebd884d8cd778494369603a9e7b58d29111bf6b41bdc2dcd87203af4e9", size = 55650, upload-time = "2024-03-22T20:32:29.939Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3b/5d/63d4ae3b9daea098d5d6f5da83984853c1bbacd5dc826764b249fe119d24/requests_oauthlib-2.0.0-py2.py3-none-any.whl", hash = "sha256:7dd8a5c40426b779b0868c404bdef9768deccf22749cde15852df527e6269b36", size = 24179, upload-time = "2024-03-22T20:32:28.055Z" },
 ]
 
 [[package]]

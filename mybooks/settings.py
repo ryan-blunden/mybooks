@@ -34,10 +34,10 @@ env_file = os.path.join(BASE_DIR, ".env")
 if os.path.exists(env_file):
     load_dotenv(env_file)
 
-SITE_URL = os.getenv("SITE_URL")
+SITE_URL = os.getenv("SITE_URL", "http://localhost:8080")
 
-LOGIN_URL = "/manage/login/"
-LOGOUT_REDIRECT_URL = "/"
+LOGIN_URL = "/signin/"
+LOGOUT_REDIRECT_URL = "/oauth-flow-test/"
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
@@ -57,7 +57,9 @@ MANAGERS = json.loads(os.getenv("MANAGERS", "[]"))
 
 # https://docs.djangoproject.com/en/5.1/ref/settings/#std:setting-ALLOWED_HOSTS
 ALLOWED_HOSTS = list(map(str.strip, os.getenv("ALLOWED_HOSTS", "").split(",")))
-CSRF_TRUSTED_ORIGINS = json.loads(os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", "[]"))
+CSRF_THING = os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", f'["{SITE_URL}"]')
+logger.info("CSRF_THING:", CSRF_THING)
+CSRF_TRUSTED_ORIGINS = json.loads(os.getenv("DJANGO_CSRF_TRUSTED_ORIGINS", f'["{SITE_URL}"]'))
 
 
 INSTALLED_APPS = [
@@ -420,6 +422,9 @@ OAUTH2_PROVIDER = {
     # this is the list of available scopes
     "ALLOWED_SCHEMES": ["http", "https"] if DEBUG else ["https"],
     "SCOPES": {"read": "Read scope", "write": "Write scope", "users": "Access to manage users", "groups": "Access to manage groups"},
+    # Allow PKCE without client authentication
+    "PKCE_REQUIRED": False,
+    "ALLOW_UNSAFE_CONFIDENTIAL_PKCE": True,
 }
 
 OAUTH_DCR_SETTINGS = {
@@ -481,7 +486,7 @@ SPECTACULAR_SETTINGS = {
 # App Settings #
 ################
 
-OATH_CLIENT_ID = os.getenv("OAUTH_CLIENT_ID")
-OATH_CLIENT_SECRET = os.getenv("OAUTH_CLIENT_SECRET")
-OAUTH_GET_CODE_VERIFIER = os.getenv("OAUTH_GET_CODE_VERIFIER")
+# OATH_CLIENT_ID = os.getenv("OAUTH_CLIENT_ID")
+# OATH_CLIENT_SECRET = os.getenv("OAUTH_CLIENT_SECRET")
+# OAUTH_GET_CODE_VERIFIER = os.getenv("OAUTH_GET_CODE_VERIFIER")
 # CODE_CHALLENGE=PpTct8akOBdXfM0Wr1zKKwni-iaYpP2fT7z-m-Vnqf8

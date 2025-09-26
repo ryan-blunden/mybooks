@@ -13,9 +13,10 @@
                 {% block head_meta %} {% endblock %}
                 <link rel="shortcut icon" href="{% static 'core/img/favicon.ico' %}" />
 
-                {% tailwind_css %}
+                {% comment %} <link href="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.css" rel="stylesheet" /> {% endcomment %}
+                <script src="https://cdn.jsdelivr.net/npm/flowbite@3.1.2/dist/flowbite.min.js"></script> 
                 <link href="{% static 'app/css/app.css' %}{{ cachebust }}" rel="stylesheet" />
-                <script src="{% static "app/vendor/flowbite-3.1.2.js" %}"></script>
+                {% tailwind_css %}
             {% endblock %}
         </head>
 

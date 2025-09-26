@@ -1,7 +1,7 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from mybooks.views import GroupViewSet, UserViewSet
+from mybooks.api_views import GroupViewSet, UserViewSet
 
 # DRF Router configuration for core API endpoints
 router = DefaultRouter()
