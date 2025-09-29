@@ -37,7 +37,7 @@ if os.path.exists(env_file):
 SITE_URL = os.getenv("SITE_URL", "http://localhost:8080")
 
 LOGIN_URL = "/signin/"
-LOGOUT_REDIRECT_URL = "/oauth-apps/"
+LOGOUT_REDIRECT_URL = "/signin/"
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
