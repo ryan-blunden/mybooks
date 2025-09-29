@@ -71,7 +71,7 @@
                     {% csrf_token %}
                     <input type="hidden" name="code" value="{{ request.GET.code }}">
                     <input type="hidden" name="state" value="{{ request.GET.state }}">
-                    <button class="block mb-4 rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800" type="submit">
+                    <button class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800 block mb-4 w-full sm:w-auto" type="submit">
                         Request Tokens
                     </button>
                 </form>
@@ -113,7 +113,7 @@
         </button>
 
         <div id="dcr-modal" tabindex="-1" aria-hidden="true" class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full">
-            <div class="relative p-4 w-full max-w-2xl max-h-full">
+            <div class="relative p-4 w-full max-w-md max-h-full">
                 <!-- Modal content -->
                 <div class="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
                     <!-- Modal header -->
@@ -130,18 +130,18 @@
                     </div>
                     <!-- Modal body -->
                     <div class="p-4 md:p-5 space-y-4">
-                        <form class="max-w-lg mx-auto space-y-4" id="dcr-form" method="post" action="{% url 'oauth-flow-register' %}">
+                        <form class="space-y-4" id="dcr-form" method="post" action="{% url 'oauth-flow-register' %}">
                             {% csrf_token %}
                             <div>
                                 <label for="client_name" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Client Name</label>
                                 <input type="text" id="client_name" name="client_name"
-                                    class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     value="{{ registration_data.client_name }}">
                             </div>
                             <div>
                                 <label for="redirect_uris" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Redirect URIs</label>
                                 <input type="text" id="redirect_uris" name="redirect_uris"
-                                    class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     value="{{ registration_data.redirect_uris|join:', ' }}">
                                     <p class="mt-2 mb-4 text-sm text-gray-500 dark:text-gray-400">Allow-list of redirect URIs where the authorization server can send the authorization code.</p>
                                     
@@ -149,53 +149,53 @@
                             <div>
                                 <label for="grant_types" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Grant Types</label>
                                 <input type="text" id="grant_types" name="grant_types"
-                                    class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     value="{{ registration_data.grant_types|join:', ' }}" readonly>
                                     <p class="mt-2 mb-4 text-sm text-gray-500 dark:text-gray-400">Uses PKCE to securely exchange an authorization code for tokens, and allows tokens to be refreshed without requiring the user to log in again.</p>
                             </div>
                             <div>
                                 <label for="response_types" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Response Types</label>
                                 <input type="text" id="response_types" name="response_types"
-                                    class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     value="{{ registration_data.response_types|join:', ' }}" readonly>
                                     <p class="mt-2 mb-4 text-sm text-gray-500 dark:text-gray-400">Receive the authorization code in the redirect query string.</p>
                             </div>
                             <div>
                                 <label for="scope" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Scope</label>
                                 <input type="text" id="scope" name="scope"
-                                    class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     value="{{ registration_data.scope|join:', ' }}">
                                     <p class="mt-2 mb-4 text-sm text-gray-500 dark:text-gray-400">Application-defined resource access scopes.</p>
                             </div>
                             <div>
                                 <label for="client_uri" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Client URI</label>
                                 <input type="text" id="client_uri" name="client_uri"
-                                    class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     value="{{ registration_data.client_uri }}">
                                     <p class="mt-2 mb-4 text-sm text-gray-500 dark:text-gray-400">Optional — identifies the app location. Not required for DCR.</p>
                             </div>
                             <div>
                                 <label for="contacts" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Contacts</label>
                                 <input type="text" id="contacts" name="contacts"
-                                    class="bg-white border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     value="{{ registration_data.contacts|join:', ' }}">
                                     <p class="mt-2 mb-4 text-sm text-gray-500 dark:text-gray-400">Optional — identifies how to contact the app creator. Not required for DCR.</p>
                             </div>
                             <div>
                                 <label for="token_endpoint_auth_method" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white">Token Endpoint Auth Method</label>
                                 <input type="text" id="token_endpoint_auth_method" name="token_endpoint_auth_method"
-                                    class="bg-gray-100 border border-gray-300 text-gray-900 text-sm rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                     value="{{ registration_data.token_endpoint_auth_method }}" readonly>
                                     <p class="mt-2 mb-4 text-sm text-gray-500 dark:text-gray-400">The client will send only its client_id (with a PKCE code verifier), suitable for public clients (e.g. SPAs and mobile apps) that cannot safely store a client secret.</p>
                             </div>
                             <div class="flex justify-end">
                                 <button 
                                     type="submit"
-                                    class="rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                                 >
                                     Register New App
                                 </button>
-                                <button type="submit" data-modal-hide="dcr-modal" class="ml-2 px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-700">
+                                <button type="button" data-modal-hide="dcr-modal" class="ml-2 px-5 py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-300 dark:focus:ring-gray-700">
                                     Cancel
                                 </button>
                             </div>
@@ -242,7 +242,7 @@
                                 <input type="hidden" name="app_id" value="{{ app.id }}">
                                 <button
                                     type="submit"
-                                    class="inline-flex rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                                    class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
                                 >
                                     Authorize
                                 </button>

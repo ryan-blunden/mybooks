@@ -104,42 +104,6 @@ paths:
         '200':
           description: Paginated list of system users
   /api/users/{id}/:
-    patch:
-      operationId: users_partial_update
-      description: Partially update user information
-      summary: Partially update user
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user.
-        required: true
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedUserRequest'
-      security:
-      - oauth2:
-        - read
-        - write
-      - tokenAuth: []
-      responses:
-        '200':
-          description: User successfully updated
-        '400':
-          description: Validation error
-        '404':
-          description: User not found
     put:
       operationId: users_update
       description: Update user information
@@ -221,6 +185,42 @@ paths:
       responses:
         '204':
           description: User successfully deleted
+        '404':
+          description: User not found
+    patch:
+      operationId: users_partial_update
+      description: Partially update user information
+      summary: Partially update user
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - oauth2:
+        - read
+        - write
+      - tokenAuth: []
+      responses:
+        '200':
+          description: User successfully updated
+        '400':
+          description: Validation error
         '404':
           description: User not found
   /api/groups/:
@@ -325,8 +325,13 @@ paths:
   /api/books/:
     post:
       operationId: create_book
-      description: Create a new catalog book. Provide core metadata and author name
-        (created on demand).
+      description: Create a new catalog book with the required metadata (title, genre)
+        and optional tagline, description, or image. Provide the associated author
+        via the 'author_name' field; if the author does not already exist, the system
+        automatically creates one. Use this endpoint when onboarding new books into
+        the shared catalog or synchronizing titles from external feeds. Validation
+        errors report missing fields, invalid enum values, or duplicate titles when
+        combined with the same author.
       summary: Create book
       tags:
       - books
@@ -352,9 +357,13 @@ paths:
         '400':
           description: Validation error
     get:
-      operationId: search_available_books
-      description: Browse the full catalog of books with search, filtering, and ordering
-        support.
+      operationId: list_catalog_books
+      description: Browse the shared book catalog with comprehensive metadata, nested
+        author information, and rich search capabilities. Use this endpoint for discovery
+        experiences, admin catalog audits, or populating auto-complete controls. Supports
+        case-insensitive search across title, tagline, description, and author name,
+        filtering by genre or author name, and ordering by title or creation timestamp.
+        Results are paginated and require OAuth clients to include the 'read' scope.
       summary: List books
       parameters:
       - in: query
@@ -481,44 +490,13 @@ paths:
         '200':
           description: Paginated list of catalog books
   /api/books/{id}/:
-    patch:
-      operationId: partial_update_book
-      description: Update selected book fields without replacing the entire record.
-      summary: Partially update book
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this book.
-        required: true
-      tags:
-      - books
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedBookRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedBookRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedBookRequest'
-      security:
-      - oauth2:
-        - read
-      - tokenAuth: []
-      responses:
-        '200':
-          description: Book partially updated
-        '400':
-          description: Validation error
-        '404':
-          description: Book not found
     put:
       operationId: update_book
-      description: Replace a book's metadata, including author reassignment if desired.
+      description: Replace every editable field on an existing book, including title,
+        genre, descriptive text, imagery, and author association. Supply the full
+        object payload (including author_name) to avoid unintentionally blanking fields.
+        Use this for full catalog corrections or when synchronizing authoritative
+        data from another system. Returns 404 if the book cannot be found.
       summary: Update book
       parameters:
       - in: path
@@ -554,7 +532,11 @@ paths:
           description: Book not found
     get:
       operationId: get_book_catalog_details
-      description: Get full catalog details for a specific book.
+      description: Retrieve the complete catalog record for a single book, including
+        title, tagline, description, genre, timestamps, and embedded author metadata.
+        Use this endpoint when rendering book detail pages, prefilling edit forms,
+        or validating book information during integrations. Returns 404 when the book
+        id does not exist.
       summary: Retrieve book
       parameters:
       - in: path
@@ -576,8 +558,11 @@ paths:
           description: Book not found
     delete:
       operationId: delete_book
-      description: Delete a catalog book. Cascades to user collections and reviews
-        tied to the book.
+      description: Delete a book from the shared catalog. This destructive action
+        cascades to user collections, reading statuses, and reviews that reference
+        the book, so coordinate with dependent teams before removal. Use it only when
+        you intend to fully retire a title from availability. Returns 404 if the book
+        cannot be found.
       summary: Delete book
       parameters:
       - in: path
@@ -595,6 +580,45 @@ paths:
       responses:
         '204':
           description: Book deleted
+        '404':
+          description: Book not found
+    patch:
+      operationId: partial_update_book
+      description: Update specific book fields without replacing the entire record,
+        making it ideal for lightweight edits such as correcting a tagline, swapping
+        imagery, or adjusting the genre. Only the fields supplied in the payload change;
+        omitted fields retain their current values. Returns 404 if the book cannot
+        be found.
+      summary: Partially update book
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this book.
+        required: true
+      tags:
+      - books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBookRequest'
+      security:
+      - oauth2:
+        - read
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Book partially updated
+        '400':
+          description: Validation error
         '404':
           description: Book not found
   /api/user-books/:
@@ -709,55 +733,6 @@ paths:
           description: Paginated list of books in user's personal collection with
             reading status
   /api/user-books/{id}/:
-    put:
-      operationId: update_book_reading_status_in_collection
-      description: Update the reading status and tracking information for a book in
-        the authenticated user's collection using the userbook_id. This endpoint allows
-        changing the reading_status (want_to_read, reading, finished, dropped) and
-        automatically manages related date fields based on status transitions. When
-        status changes to 'reading', date_started is set to current time. When status
-        changes to 'finished', date_finished is set to current time. Use this tool
-        when a user progresses through reading a book or changes their intent for
-        a book in their collection. The userbook_id identifies the specific user-book
-        relationship to update. You cannot change which book this relationship points
-        to - only the user's interaction with that book. The system validates status
-        transitions and ensures dates remain consistent. Requires the complete object
-        data (PUT method). PATCH method is not supported due to technical issues -
-        use PUT for all updates. Requires user authentication and ownership of the
-        userbook relationship.
-      summary: Update reading status and tracking for book in user's collection
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user book.
-        required: true
-      tags:
-      - user-books
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-      security:
-      - oauth2:
-        - write
-      - tokenAuth: []
-      responses:
-        '200':
-          description: Book reading status successfully updated with automatic date
-            management
-        '400':
-          description: Validation error or invalid status transition
-        '404':
-          description: UserBook relationship not found in authenticated user's collection
     get:
       operationId: get_book_from_user_collection
       description: Retrieve comprehensive information about a specific book in the
@@ -826,10 +801,63 @@ paths:
             collection
         '404':
           description: UserBook relationship not found in authenticated user's collection
+    put:
+      operationId: update_book_reading_status_in_collection
+      description: Update the reading status and tracking information for a book in
+        the authenticated user's collection using the userbook_id. This endpoint allows
+        changing the reading_status (want_to_read, reading, finished, dropped) and
+        automatically manages related date fields based on status transitions. When
+        status changes to 'reading', date_started is set to current time. When status
+        changes to 'finished', date_finished is set to current time. Use this tool
+        when a user progresses through reading a book or changes their intent for
+        a book in their collection. The userbook_id identifies the specific user-book
+        relationship to update. You cannot change which book this relationship points
+        to - only the user's interaction with that book. The system validates status
+        transitions and ensures dates remain consistent. Requires the complete object
+        data (PUT method). PATCH method is not supported due to technical issues -
+        use PUT for all updates. Requires user authentication and ownership of the
+        userbook relationship.
+      summary: Update reading status and tracking for book in user's collection
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user book.
+        required: true
+      tags:
+      - user-books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+      security:
+      - oauth2:
+        - write
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Book reading status successfully updated with automatic date
+            management
+        '400':
+          description: Validation error or invalid status transition
+        '404':
+          description: UserBook relationship not found in authenticated user's collection
   /api/authors/:
     post:
       operationId: create_author
-      description: Create a new author record for use when cataloging books.
+      description: Create a new author record that can be referenced by catalog books
+        and user collections. Provide the author's name (unique), optional biography,
+        and optional profile image to seed future book ingestion. Use this endpoint
+        when onboarding new authors into the catalog or syncing authors from external
+        feeds. Validation errors highlight duplicate names or invalid field formats.
       summary: Create author
       tags:
       - authors
@@ -856,8 +884,13 @@ paths:
           description: Validation error
     get:
       operationId: list_authors_for_discovery
-      description: Retrieve a paginated list of all authors with search and ordering
-        support.
+      description: Retrieve a paginated list of catalog authors with biography details,
+        profile imagery, and the total number of books they have written to support
+        discovery workflows. Use this endpoint when building author pickers, powering
+        browse screens, or auditing catalog completeness. The response mirrors the
+        AuthorSerializer payload and supports case-insensitive search across name
+        and biography plus ordering by name or creation timestamp. Requires clients
+        to authenticate with the 'read' OAuth scope.
       summary: List authors
       parameters:
       - in: query
@@ -891,44 +924,13 @@ paths:
         '200':
           description: Paginated list of authors
   /api/authors/{id}/:
-    patch:
-      operationId: partial_update_author
-      description: Update selected author fields without replacing the entire record.
-      summary: Partially update author
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this author.
-        required: true
-      tags:
-      - authors
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedAuthorRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedAuthorRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedAuthorRequest'
-      security:
-      - oauth2:
-        - read
-      - tokenAuth: []
-      responses:
-        '200':
-          description: Author partially updated
-        '400':
-          description: Validation error
-        '404':
-          description: Author not found
     put:
       operationId: update_author
-      description: Replace all author fields with supplied data.
+      description: Replace the entire author record with the supplied payload, including
+        name, biography, and imagery. Use this endpoint for administrative corrections
+        where you want to overwrite all fields at once. Changing the name will cascade
+        to every related book, so ensure downstream systems expect the new value.
+        Returns 404 if the author does not exist.
       summary: Update author
       parameters:
       - in: path
@@ -964,7 +966,11 @@ paths:
           description: Author not found
     get:
       operationId: get_author_complete_details
-      description: Get full author details and their books.
+      description: Retrieve the complete profile for a specific author including biography
+        text, optional image, timestamps, and a list of books associated with that
+        author. Use this endpoint for author detail pages, edit screens, or whenever
+        you need both the author metadata and their catalog of books in a single payload.
+        Returns 404 when the author id is invalid or no longer exists.
       summary: Retrieve author
       parameters:
       - in: path
@@ -986,7 +992,11 @@ paths:
           description: Author not found
     delete:
       operationId: delete_author
-      description: Delete an author. Cascades to books that reference this author.
+      description: Delete an author from the catalog. This is a destructive action
+        that cascades to all catalog books tied to the author and, by extension, to
+        user collections and reviews that depend on those books. Use this only when
+        you intentionally want to purge an author and every related record. Returns
+        404 if the author does not exist.
       summary: Delete author
       parameters:
       - in: path
@@ -1006,9 +1016,48 @@ paths:
           description: Author deleted
         '404':
           description: Author not found
+    patch:
+      operationId: partial_update_author
+      description: Update selected author fields (such as biography text or profile
+        image) without supplying the entire record. Use this endpoint for lightweight
+        edits or incremental enrichment of author metadata. Only the fields provided
+        in the request body are changed; omitted fields remain untouched. Returns
+        404 if the author does not exist.
+      summary: Partially update author
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this author.
+        required: true
+      tags:
+      - authors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAuthorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAuthorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAuthorRequest'
+      security:
+      - oauth2:
+        - read
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Author partially updated
+        '400':
+          description: Validation error
+        '404':
+          description: Author not found
   /api/reviews/:
     post:
-      operationId: create_book_review
+      operationId: create_user_book_review
       description: Create a new review for a book that exists in the authenticated
         user's personal collection. The review must include a star rating (integer
         from 1-5) and can optionally include review text content. Users can only write
@@ -1106,52 +1155,6 @@ paths:
           description: Paginated list of all reviews written by the authenticated
             user
   /api/reviews/{id}/:
-    patch:
-      operationId: partially_update_user_review
-      description: Partially update an existing review by modifying only the fields
-        you specify (typically rating or text) without requiring the complete review
-        data. This endpoint allows updating just the star rating, just the review
-        text, or both, without needing to provide all fields. The associated book
-        cannot be changed. Use this tool when you want to make targeted changes to
-        a review, such as adjusting only the rating or only the text content. The
-        update automatically sets the updated_at timestamp. More convenient than the
-        full update endpoint when you only need to change specific fields. The review_id
-        must correspond to a review owned by the authenticated user. Validates that
-        any provided rating is within the 1-5 range. The book association remains
-        unchanged. Requires user authentication and ownership of the review.
-      summary: Partially update specific fields of a book review
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this review.
-        required: true
-      tags:
-      - reviews
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PatchedReviewRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/PatchedReviewRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/PatchedReviewRequest'
-      security:
-      - oauth2:
-        - write
-      - tokenAuth: []
-      responses:
-        '200':
-          description: Review fields successfully updated with automatic timestamp
-            management
-        '400':
-          description: Validation error or invalid field values
-        '404':
-          description: Review not found or not owned by authenticated user
     put:
       operationId: update_user_book_review
       description: Update an existing review written by the authenticated user using
@@ -1263,6 +1266,52 @@ paths:
           description: Review permanently deleted from the system
         '404':
           description: Review not found or not owned by authenticated user
+    patch:
+      operationId: partially_update_user_review
+      description: Partially update an existing review by modifying only the fields
+        you specify (typically rating or text) without requiring the complete review
+        data. This endpoint allows updating just the star rating, just the review
+        text, or both, without needing to provide all fields. The associated book
+        cannot be changed. Use this tool when you want to make targeted changes to
+        a review, such as adjusting only the rating or only the text content. The
+        update automatically sets the updated_at timestamp. More convenient than the
+        full update endpoint when you only need to change specific fields. The review_id
+        must correspond to a review owned by the authenticated user. Validates that
+        any provided rating is within the 1-5 range. The book association remains
+        unchanged. Requires user authentication and ownership of the review.
+      summary: Partially update specific fields of a book review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedReviewRequest'
+      security:
+      - oauth2:
+        - write
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Review fields successfully updated with automatic timestamp
+            management
+        '400':
+          description: Validation error or invalid field values
+        '404':
+          description: Review not found or not owned by authenticated user
   /api/genres/:
     get:
       operationId: list_available_book_genres
@@ -1348,9 +1397,10 @@ paths:
           description: Genre not found - invalid genre identifier provided
   /api/debug/headers/:
     post:
-      operationId: debug_headers_create
+      operationId: debug_request_headers_submit
       description: Temporary diagnostic endpoint to view incoming request headers
-        and resolved auth metadata.
+        and resolved auth metadata. Use POST to examine how headers and authentication
+        behave with bodies.
       summary: Inspect request headers and auth info
       tags:
       - debug
@@ -1365,7 +1415,7 @@ paths:
                 $ref: '#/components/schemas/DebugHeadersResponse'
           description: ''
     get:
-      operationId: debug_headers_retrieve
+      operationId: debug_request_headers
       description: Temporary diagnostic endpoint to view incoming request headers
         and resolved auth metadata.
       summary: Inspect request headers and auth info

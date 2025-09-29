@@ -24,7 +24,13 @@ from .serializers import (
     list=extend_schema(
         operation_id="list_authors_for_discovery",
         summary="List authors",
-        description="Retrieve a paginated list of all authors with search and ordering support.",
+        description=(
+            "Retrieve a paginated list of catalog authors with biography details, profile imagery, and the total "
+            "number of books they have written to support discovery workflows. Use this endpoint when building author "
+            "pickers, powering browse screens, or auditing catalog completeness. The response mirrors the "
+            "AuthorSerializer payload and supports case-insensitive search across name and biography plus ordering by "
+            "name or creation timestamp. Requires clients to authenticate with the 'read' OAuth scope."
+        ),
         parameters=[
             OpenApiParameter(
                 name="search",
@@ -48,7 +54,12 @@ from .serializers import (
     retrieve=extend_schema(
         operation_id="get_author_complete_details",
         summary="Retrieve author",
-        description="Get full author details and their books.",
+        description=(
+            "Retrieve the complete profile for a specific author including biography text, optional image, timestamps, "
+            "and a list of books associated with that author. Use this endpoint for author detail pages, edit screens, "
+            "or whenever you need both the author metadata and their catalog of books in a single payload. Returns 404 "
+            "when the author id is invalid or no longer exists."
+        ),
         tags=["authors"],
         responses={
             200: OpenApiResponse(description="Author details returned"),
@@ -58,7 +69,12 @@ from .serializers import (
     create=extend_schema(
         operation_id="create_author",
         summary="Create author",
-        description="Create a new author record for use when cataloging books.",
+        description=(
+            "Create a new author record that can be referenced by catalog books and user collections. Provide the "
+            "author's name (unique), optional biography, and optional profile image to seed future book ingestion. Use "
+            "this endpoint when onboarding new authors into the catalog or syncing authors from external feeds. "
+            "Validation errors highlight duplicate names or invalid field formats."
+        ),
         tags=["authors"],
         responses={
             201: OpenApiResponse(description="Author created"),
@@ -68,7 +84,12 @@ from .serializers import (
     update=extend_schema(
         operation_id="update_author",
         summary="Update author",
-        description="Replace all author fields with supplied data.",
+        description=(
+            "Replace the entire author record with the supplied payload, including name, biography, and imagery. Use "
+            "this endpoint for administrative corrections where you want to overwrite all fields at once. Changing the "
+            "name will cascade to every related book, so ensure downstream systems expect the new value. Returns 404 "
+            "if the author does not exist."
+        ),
         tags=["authors"],
         responses={
             200: OpenApiResponse(description="Author updated"),
@@ -79,7 +100,12 @@ from .serializers import (
     partial_update=extend_schema(
         operation_id="partial_update_author",
         summary="Partially update author",
-        description="Update selected author fields without replacing the entire record.",
+        description=(
+            "Update selected author fields (such as biography text or profile image) without supplying the entire "
+            "record. Use this endpoint for lightweight edits or incremental enrichment of author metadata. Only the "
+            "fields provided in the request body are changed; omitted fields remain untouched. Returns 404 if the "
+            "author does not exist."
+        ),
         tags=["authors"],
         responses={
             200: OpenApiResponse(description="Author partially updated"),
@@ -90,7 +116,12 @@ from .serializers import (
     destroy=extend_schema(
         operation_id="delete_author",
         summary="Delete author",
-        description="Delete an author. Cascades to books that reference this author.",
+        description=(
+            "Delete an author from the catalog. This is a destructive action that cascades to all catalog books tied to "
+            "the author and, by extension, to user collections and reviews that depend on those books. Use this only "
+            "when you intentionally want to purge an author and every related record. Returns 404 if the author does "
+            "not exist."
+        ),
         tags=["authors"],
         responses={
             204: OpenApiResponse(description="Author deleted"),
@@ -261,7 +292,7 @@ class UserBookViewSet(viewsets.ModelViewSet):
         },
     ),
     create=extend_schema(
-        operation_id="create_book_review",
+        operation_id="create_user_book_review",
         summary="Write a new review for a book in user's collection",
         description="Create a new review for a book that exists in the authenticated user's personal collection. The review must include a star rating (integer from 1-5) and can optionally include review text content. Users can only write one review per book - attempting to create a duplicate review will result in a validation error. The book being reviewed must already exist in the user's collection (added via the user_books endpoints). Use this tool when a user wants to rate and review a book they have read or are reading. The review becomes part of the book's overall review collection and is associated with both the user and the specific book. Reviews can be edited later using the update endpoints. The system validates that the rating is within the 1-5 range and that the user hasn't already reviewed this book. Requires user authentication and the book must be in the user's collection.",
         tags=["reviews"],
@@ -340,9 +371,15 @@ class ReviewViewSet(viewsets.ModelViewSet):
 
 @extend_schema_view(
     list=extend_schema(
-        operation_id="search_available_books",
+        operation_id="list_catalog_books",
         summary="List books",
-        description="Browse the full catalog of books with search, filtering, and ordering support.",
+        description=(
+            "Browse the shared book catalog with comprehensive metadata, nested author information, and rich search "
+            "capabilities. Use this endpoint for discovery experiences, admin catalog audits, or populating "
+            "auto-complete controls. Supports case-insensitive search across title, tagline, description, and author "
+            "name, filtering by genre or author name, and ordering by title or creation timestamp. Results are "
+            "paginated and require OAuth clients to include the 'read' scope."
+        ),
         parameters=[
             OpenApiParameter(
                 name="search",
@@ -366,7 +403,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
     retrieve=extend_schema(
         operation_id="get_book_catalog_details",
         summary="Retrieve book",
-        description="Get full catalog details for a specific book.",
+        description=(
+            "Retrieve the complete catalog record for a single book, including title, tagline, description, genre, "
+            "timestamps, and embedded author metadata. Use this endpoint when rendering book detail pages, "
+            "prefilling edit forms, or validating book information during integrations. Returns 404 when the book id "
+            "does not exist."
+        ),
         tags=["books"],
         responses={
             200: OpenApiResponse(description="Book details returned"),
@@ -376,7 +418,13 @@ class ReviewViewSet(viewsets.ModelViewSet):
     create=extend_schema(
         operation_id="create_book",
         summary="Create book",
-        description="Create a new catalog book. Provide core metadata and author name (created on demand).",
+        description=(
+            "Create a new catalog book with the required metadata (title, genre) and optional tagline, description, or "
+            "image. Provide the associated author via the 'author_name' field; if the author does not already exist, "
+            "the system automatically creates one. Use this endpoint when onboarding new books into the shared catalog "
+            "or synchronizing titles from external feeds. Validation errors report missing fields, invalid enum "
+            "values, or duplicate titles when combined with the same author."
+        ),
         tags=["books"],
         responses={
             201: OpenApiResponse(description="Book created"),
@@ -386,7 +434,12 @@ class ReviewViewSet(viewsets.ModelViewSet):
     update=extend_schema(
         operation_id="update_book",
         summary="Update book",
-        description="Replace a book's metadata, including author reassignment if desired.",
+        description=(
+            "Replace every editable field on an existing book, including title, genre, descriptive text, imagery, and "
+            "author association. Supply the full object payload (including author_name) to avoid unintentionally "
+            "blanking fields. Use this for full catalog corrections or when synchronizing authoritative data from "
+            "another system. Returns 404 if the book cannot be found."
+        ),
         tags=["books"],
         responses={
             200: OpenApiResponse(description="Book updated"),
@@ -397,7 +450,11 @@ class ReviewViewSet(viewsets.ModelViewSet):
     partial_update=extend_schema(
         operation_id="partial_update_book",
         summary="Partially update book",
-        description="Update selected book fields without replacing the entire record.",
+        description=(
+            "Update specific book fields without replacing the entire record, making it ideal for lightweight edits "
+            "such as correcting a tagline, swapping imagery, or adjusting the genre. Only the fields supplied in the "
+            "payload change; omitted fields retain their current values. Returns 404 if the book cannot be found."
+        ),
         tags=["books"],
         responses={
             200: OpenApiResponse(description="Book partially updated"),
@@ -408,7 +465,11 @@ class ReviewViewSet(viewsets.ModelViewSet):
     destroy=extend_schema(
         operation_id="delete_book",
         summary="Delete book",
-        description="Delete a catalog book. Cascades to user collections and reviews tied to the book.",
+        description=(
+            "Delete a book from the shared catalog. This destructive action cascades to user collections, reading "
+            "statuses, and reviews that reference the book, so coordinate with dependent teams before removal. Use it "
+            "only when you intend to fully retire a title from availability. Returns 404 if the book cannot be found."
+        ),
         tags=["books"],
         responses={
             204: OpenApiResponse(description="Book deleted"),
@@ -617,8 +678,20 @@ class GenreViewSet(viewsets.ViewSet):
 
 # AIDEV-NOTE: Debug view to inspect request headers - remove after debugging auth issues
 @extend_schema(
+    methods=["GET"],
+    operation_id="debug_request_headers",
     summary="Inspect request headers and auth info",
     description="Temporary diagnostic endpoint to view incoming request headers and resolved auth metadata.",
+    tags=["debug"],
+    responses=DebugHeadersResponseSerializer,
+    request=None,
+)
+@extend_schema(
+    methods=["POST"],
+    operation_id="debug_request_headers_submit",
+    summary="Inspect request headers and auth info",
+    description="Temporary diagnostic endpoint to view incoming request headers and resolved auth metadata. "
+    "Use POST to examine how headers and authentication behave with bodies.",
     tags=["debug"],
     responses=DebugHeadersResponseSerializer,
     request=None,
