@@ -12,6 +12,7 @@ from .serializers import (
     AuthorDetailSerializer,
     AuthorSerializer,
     BookSerializer,
+    DebugHeadersResponseSerializer,
     GenreSerializer,
     ReviewSerializer,
     UserBookDetailSerializer,
@@ -615,6 +616,13 @@ class GenreViewSet(viewsets.ViewSet):
 
 
 # AIDEV-NOTE: Debug view to inspect request headers - remove after debugging auth issues
+@extend_schema(
+    summary="Inspect request headers and auth info",
+    description="Temporary diagnostic endpoint to view incoming request headers and resolved auth metadata.",
+    tags=["debug"],
+    responses=DebugHeadersResponseSerializer,
+    request=None,
+)
 @api_view(["GET", "POST"])
 @permission_classes([AllowAny])  # Allow without auth for debugging
 def debug_headers(request):
