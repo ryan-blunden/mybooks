@@ -13,10 +13,8 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 import json
 import logging
 import os
-from logging import basicConfig
 from pathlib import Path
 
-import logfire
 import sentry_sdk
 from django.db.models import signals as django_signals
 from django_components import ComponentsSettings
@@ -365,18 +363,6 @@ if SENTRY_ENABLED:
     )
 
 
-LOGFIRE_ENABLED = strtobool(os.getenv("LOGFIRE_ENABLED", "false"))
-if LOGFIRE_ENABLED:
-    logfire.configure(
-        token=os.getenv("LOGFIRE_TOKEN"),
-        service_name="mybooks",
-        service_version=VERSION,
-        environment=ENV,
-    )
-    logfire.instrument_django()
-    basicConfig(handlers=[logfire.LogfireLoggingHandler()])
-
-
 TAILWIND_APP_NAME = "theme"
 
 COMPONENTS = ComponentsSettings(
@@ -421,7 +407,7 @@ REST_FRAMEWORK = {
 OAUTH2_PROVIDER = {
     # this is the list of available scopes
     "ALLOWED_SCHEMES": ["http", "https"] if DEBUG else ["https"],
-    "SCOPES": {"read": "Read scope", "write": "Write scope", "users": "Access to manage users", "groups": "Access to manage groups"},
+    "SCOPES": {"read": "Read scope", "write": "Write scope"},
     # Allow PKCE without client authentication
     "PKCE_REQUIRED": False,
     "ALLOW_UNSAFE_CONFIDENTIAL_PKCE": True,

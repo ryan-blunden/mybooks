@@ -140,16 +140,18 @@ class UserBookSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, data):
-        """Validate that either book_id or book creation fields are provided."""
+        """Validate that either book_id or book creation fields are provided on create, not required on update."""
+        request = self.context.get("request")
+        method = getattr(request, "method", None)
         has_book_id = "book_id" in data
         has_book_fields = any(field in data for field in ["title", "author_name", "genre"])
 
-        if not has_book_id and not has_book_fields:
-            raise serializers.ValidationError("Either provide book_id or book creation fields (title, author_name, genre)")
-
-        if has_book_id and has_book_fields:
-            raise serializers.ValidationError("Provide either book_id or book creation fields, not both")
-
+        if method == "POST":
+            if not has_book_id and not has_book_fields:
+                raise serializers.ValidationError("Either provide book_id or book creation fields (title, author_name, genre)")
+            if has_book_id and has_book_fields:
+                raise serializers.ValidationError("Provide either book_id or book creation fields, not both")
+        # For PUT/PATCH, don't require book_id or book creation fields
         return data
 
     def create(self, validated_data):

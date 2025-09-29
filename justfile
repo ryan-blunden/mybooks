@@ -65,6 +65,8 @@ app-collectstatic:
    uv run manage.py collectstatic --no-input -i node_modules -i source.css
 
 
+streamlit:
+    streamlit run agent/agent.py
 
 ##########
 # CHECKS #

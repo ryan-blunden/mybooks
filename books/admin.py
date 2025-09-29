@@ -18,7 +18,6 @@ class BookAdmin(admin.ModelAdmin):
     list_filter = ("genre", "created_at")
     readonly_fields = ("created_at", "updated_at")
     ordering = ("title",)
-    # AIDEV-NOTE: list_select_related avoids extra queries for author data in admin list
     list_select_related = ("author",)
 
 
@@ -27,9 +26,7 @@ class UserBookAdmin(admin.ModelAdmin):
     list_display = ("user", "book", "reading_status", "date_added")
     search_fields = ("user__username", "book__title")
     list_filter = ("reading_status", "date_added")
-    readonly_fields = ("date_added", "date_started", "date_finished")
     ordering = ("-date_added",)
-    # AIDEV-NOTE: list_select_related keeps admin list fast with user/book relations
     list_select_related = ("user", "book")
 
 
@@ -40,5 +37,4 @@ class ReviewAdmin(admin.ModelAdmin):
     list_filter = ("rating", "created_at")
     readonly_fields = ("created_at", "updated_at")
     ordering = ("-created_at",)
-    # AIDEV-NOTE: list_select_related prevents N+1 queries for user/book columns
     list_select_related = ("user", "book")

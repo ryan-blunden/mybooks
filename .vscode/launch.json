@@ -44,5 +44,17 @@
         "DOPPLER_ENV": "1"
       }
     },
+    {
+      "name": "Streamlit",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/.venv/bin/streamlit",
+      "args": ["run", "agent/agent.py"],
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "env": {
+        "DOPPLER_ENV": "1"
+      }
+    },
   ]
 }

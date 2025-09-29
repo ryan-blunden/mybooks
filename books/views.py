@@ -1,3 +1,4 @@
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from oauth2_provider.contrib.rest_framework import IsAuthenticatedOrTokenHasScope
@@ -264,6 +265,28 @@ class UserBookViewSet(viewsets.ModelViewSet):
         if self.action == "retrieve":
             return UserBookDetailSerializer
         return UserBookSerializer
+
+    def update(self, request, *args, **kwargs):
+        """
+        Update reading status and manage date_started/date_finished automatically.
+        """
+        partial = kwargs.pop("partial", False)
+        instance = self.get_object()
+        old_status = instance.reading_status
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        new_status = serializer.validated_data.get("reading_status", old_status)
+
+        # Set date_started if status changes to 'reading'
+        if old_status != "reading" and new_status == "reading":
+            serializer.validated_data["date_started"] = timezone.now()
+
+        # Set date_finished if status changes to 'finished' or 'dropped'
+        if old_status not in ("finished", "dropped") and new_status in ("finished", "dropped"):
+            serializer.validated_data["date_finished"] = timezone.now()
+
+        self.perform_update(serializer)
+        return Response(serializer.data)
 
 
 @extend_schema_view(
