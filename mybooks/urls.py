@@ -5,12 +5,12 @@ from django.urls import include, path, re_path
 from django.views.static import serve
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
 from oauth2_provider import urls as oauth2_urls
-from oauth_dcr.views import DynamicClientRegistrationView
 
 from mybooks import core_views, oauth_views
 
 urlpatterns = [
     path(r"health-check/", include("health_check.urls")),
+    path("signup/", core_views.signup, name="signup"),
     path("signin/", core_views.signin, name="signin"),
     path("signout/", core_views.signout, name="signout"),
     # Core API endpoints (users, groups)
@@ -23,12 +23,16 @@ urlpatterns = [
     path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
     # Custom app views
     path("", core_views.home, name="home"),
-    path("oauth-flow-test/", oauth_views.oauth_flow_test, name="oauth-flow-test"),
-    path("oauth-flow-register/", oauth_views.oauth_flow_register_app, name="oauth-flow-register"),
-    path("oauth-flow-authorize/", oauth_views.authorize_app, name="oauth-flow-authorize"),
-    path("oauth-flow-tokens/", oauth_views.oauth_exchange_code_for_tokens, name="oauth-flow-tokens"),
+    path("oauth-apps/", oauth_views.apps, name="oauth-apps"),
+    path("oauth-apps-register/", oauth_views.register, name="oauth-apps-register"),
+    path("oauth-apps-authorize/", oauth_views.authorize, name="oauth-apps-authorize"),
+    path("oauth-apps-get-tokens/", oauth_views.get_tokens, name="oauth-apps-get-tokens"),
     path("oauth/", include(oauth2_urls)),
-    path("oauth/register/", DynamicClientRegistrationView.as_view(), name="oauth2_dcr"),
+    path(
+        "oauth/register/",
+        oauth_views.UserOwnedDynamicClientRegistrationView.as_view(),
+        name="oauth2_dcr",
+    ),
     path(".well-known/oauth-authorization-server", oauth_views.oauth_metadata, name="oauth-metadata"),
     path(
         "manage/password_reset/",

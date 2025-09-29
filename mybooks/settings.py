@@ -37,7 +37,7 @@ if os.path.exists(env_file):
 SITE_URL = os.getenv("SITE_URL", "http://localhost:8080")
 
 LOGIN_URL = "/signin/"
-LOGOUT_REDIRECT_URL = "/oauth-flow-test/"
+LOGOUT_REDIRECT_URL = "/oauth-apps/"
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
@@ -475,8 +475,6 @@ SPECTACULAR_SETTINGS = {
     "OAUTH2_SCOPES": {
         "read": "Read scope",
         "write": "Write scope",
-        "users": "Access to manage users",
-        "groups": "Access to manage groups",
     },
     # "SECURITY": [{"oauth2": []}, {"tokenAuth": []}],
 }

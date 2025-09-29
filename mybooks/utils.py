@@ -36,14 +36,12 @@ def get_code_verifier() -> Tuple[str, str]:
 def get_oauth_server_metadata() -> dict:
     base_url = settings.SITE_URL.rstrip("/")
 
-    return {
+    metadata = {
         "issuer": base_url,
         "authorization_endpoint": f"{base_url}{reverse('oauth2_provider:authorize')}",
         "token_endpoint": f"{base_url}{reverse('oauth2_provider:token')}",
         "registration_endpoint": f"{base_url}{reverse('oauth2_dcr')}",
-        "userinfo_endpoint": f"{base_url}{reverse('oauth2_provider:user-info')}",
         "introspection_endpoint": f"{base_url}{reverse('oauth2_provider:introspect')}",
-        "jwks_uri": f"{base_url}{reverse('oauth2_provider:jwks-info')}",
         "revocation_endpoint": f"{base_url}{reverse('oauth2_provider:revoke-token')}",
         "scopes_supported": ["read", "write"],
         "response_types_supported": ["code"],
@@ -52,3 +50,13 @@ def get_oauth_server_metadata() -> dict:
         "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post", "none"],
         "code_challenge_methods_supported": ["plain", "S256"],
     }
+
+    if settings.OAUTH2_PROVIDER.get("OIDC_ENABLED", False):
+        metadata.update(
+            {
+                "userinfo_endpoint": f"{base_url}{reverse('oauth2_provider:user-info')}",
+                "jwks_uri": f"{base_url}{reverse('oauth2_provider:jwks-info')}",
+            }
+        )
+
+    return metadata

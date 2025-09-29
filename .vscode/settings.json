@@ -23,7 +23,7 @@
   "tailwindCSS.includeLanguages": {
     "django-html": "html"
   },
-  "tailwindCSS.experimental.configFile": "core/theme/css/source.css",
+  "tailwindCSS.experimental.configFile": "theme/static_src/src/source.css",
   "editor.tabCompletion": "on",
   "emmet.includeLanguages": {
     "django-html": "html"

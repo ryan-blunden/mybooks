@@ -5,13 +5,31 @@ from urllib.parse import urlencode
 import requests
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from oauth2_provider.models import Application
+from oauth_dcr.views import DynamicClientRegistrationView
 
 from mybooks.utils import build_code_challenge, get_code_verifier, get_oauth_server_metadata
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class UserOwnedDynamicClientRegistrationView(LoginRequiredMixin, DynamicClientRegistrationView):
+    """Login-gated DCR endpoint that associates new apps with the requesting user."""
+
+    # AIDEV-NOTE: DCR apps must retain a reference to the owner; do not remove user assignment.
+    def _create_application(self, metadata):
+        """Persist the application with the authenticated owner."""
+        application = super()._create_application(metadata)
+        application.user = self.request.user
+        application.save(update_fields=["user"])
+        return application
 
 
 def oauth_metadata(request):
@@ -19,7 +37,8 @@ def oauth_metadata(request):
     return JsonResponse(get_oauth_server_metadata())
 
 
-def oauth_flow_test(request):
+@login_required
+def apps(request):
     code_challenge = request.session.get("oauth_code_challenge")
 
     # Generate PKCE code verifier and challenge if not in existing auth flow
@@ -30,7 +49,7 @@ def oauth_flow_test(request):
         request.session["oauth_code_verifier"] = code_verifier
         request.session["oauth_code_challenge"] = code_challenge
 
-    applications = Application.objects.all().order_by("-created")
+    applications = Application.objects.filter(user=request.user).order_by("-created")
 
     tokens = request.session.get("oauth_tokens")
     if tokens is not None:
@@ -39,7 +58,7 @@ def oauth_flow_test(request):
     # Pre-fill registration data for new application
     registration_data = {
         "client_name": f"OAuth App {uuid.uuid4().hex[:4]}",
-        "redirect_uris": [request.build_absolute_uri(reverse("oauth-flow-test"))],
+        "redirect_uris": [request.build_absolute_uri(reverse("oauth-apps"))],
         "grant_types": ["authorization_code", "refresh_token"],
         "response_types": ["code"],
         "scope": ["read", "write"],
@@ -58,11 +77,12 @@ def oauth_flow_test(request):
         "oauth_tokens": tokens,
         "oauth_server_metadata": json.dumps(get_oauth_server_metadata(), indent=2),
     }
-    return render(request, "oauth_flow_test.html", context)
+    return render(request, "oauth_apps.html", context)
 
 
+@login_required
 @require_POST
-def oauth_flow_register_app(request):
+def register(request):
     dcr_url = request.build_absolute_uri(reverse("oauth2_dcr"))
     client_name = request.POST.get("client_name", "").strip()
     redirect_uris = [uri.strip() for uri in request.POST.get("redirect_uris", "").split(",") if uri.strip()] or [dcr_url]
@@ -78,7 +98,12 @@ def oauth_flow_register_app(request):
         "token_endpoint_auth_method": "none",
     }
     try:
-        response = requests.post(dcr_url, json=registration_data, headers={"Content-Type": "application/json"})
+        response = requests.post(
+            dcr_url,
+            json=registration_data,
+            headers={"Content-Type": "application/json"},
+            cookies=request.COOKIES,
+        )
 
         if response.status_code == 201:
             client_data = response.json()
@@ -87,30 +112,37 @@ def oauth_flow_register_app(request):
 
             messages.success(request, f"Application {client_name} registered successfully!")
         else:
-            messages.error(request, f"Registration of '{client_name}' failed: {response.status_code} {response.reason}: {response.text}")
+            snippet = response.text.strip()
+            truncated = snippet[:200] + ("…" if len(snippet) > 200 else "")
+            suffix = " Sign in before registering a new OAuth application." if response.status_code in {401, 403} else ""
+            messages.error(
+                request,
+                (f"Registration of '{client_name}' failed: " f"{response.status_code} {response.reason}: {truncated}.{suffix}"),
+            )
     except Exception as exc:
         messages.error(request, f"Registration of '{client_name}' failed: {str(exc)}")
     finally:
-        return HttpResponseRedirect(reverse("oauth-flow-test"))
+        return HttpResponseRedirect(reverse("oauth-apps"))
 
 
+@login_required
 @require_POST
-def authorize_app(request):
+def authorize(request):
     app_id = request.POST.get("app_id")
     if not app_id:
         messages.error(request, "Missing application identifier for authorization.")
-        return HttpResponseRedirect(reverse("oauth-flow-test"))
+        return HttpResponseRedirect(reverse("oauth-apps"))
 
     try:
         application = Application.objects.get(pk=app_id)
     except Application.DoesNotExist:
         messages.error(request, "The selected application could not be found.")
-        return HttpResponseRedirect(reverse("oauth-flow-test"))
+        return HttpResponseRedirect(reverse("oauth-apps"))
 
     redirect_uri_candidates = [uri for uri in application.redirect_uris.split() if uri]
     if not redirect_uri_candidates:
         messages.error(request, "The selected application has no configured redirect URIs.")
-        return HttpResponseRedirect(reverse("oauth-flow-test"))
+        return HttpResponseRedirect(reverse("oauth-apps"))
 
     redirect_uri = redirect_uri_candidates[0]
     client_id = application.client_id
@@ -145,8 +177,9 @@ def authorize_app(request):
     return HttpResponseRedirect(authorize_url)
 
 
+@login_required
 @require_POST
-def oauth_exchange_code_for_tokens(request):
+def get_tokens(request):
     """Exchange the authorization code for access tokens."""
     code = request.POST.get("code")
     posted_state = request.POST.get("state")
@@ -158,15 +191,15 @@ def oauth_exchange_code_for_tokens(request):
 
     if not code:
         messages.error(request, "Authorization code missing; restart the OAuth flow.")
-        return HttpResponseRedirect(reverse("oauth-flow-test"))
+        return HttpResponseRedirect(reverse("oauth-apps"))
 
     if expected_state and posted_state and posted_state != expected_state:
         messages.error(request, "State mismatch detected; restart the OAuth flow.")
-        return HttpResponseRedirect(reverse("oauth-flow-test"))
+        return HttpResponseRedirect(reverse("oauth-apps"))
 
     if not all([client_id, code_verifier, redirect_uri]):
         messages.error(request, "Missing OAuth session data; restart the OAuth flow.")
-        return HttpResponseRedirect(reverse("oauth-flow-test"))
+        return HttpResponseRedirect(reverse("oauth-apps"))
 
     token_url = request.build_absolute_uri(reverse("oauth2_provider:token"))
     token_data = {
@@ -188,7 +221,8 @@ def oauth_exchange_code_for_tokens(request):
         request.session["oauth_tokens"] = response.json()
         for key in ["oauth_code_verifier", "oauth_state", "oauth_code_challenge"]:
             request.session.pop(key, None)
+        messages.success(request, "Token exchange successful!")
     else:
         messages.error(request, f"Token exchange failed: {response.status_code} {response.reason}: {response.text}")
 
-    return HttpResponseRedirect(reverse("oauth-flow-test"))
+    return HttpResponseRedirect(reverse("oauth-apps"))
