@@ -29,8 +29,7 @@ urlpatterns = [
     path("oauth-flow-tokens/", oauth_views.oauth_exchange_code_for_tokens, name="oauth-flow-tokens"),
     path("oauth/", include(oauth2_urls)),
     path("oauth/register/", DynamicClientRegistrationView.as_view(), name="oauth2_dcr"),
-    path(".well-known/oauth-authorization-server", oauth_views.oauth_metadata),
-    path("oauth/.well-known/oauth-authorization-server", oauth_views.oauth_metadata),
+    path(".well-known/oauth-authorization-server", oauth_views.oauth_metadata, name="oauth-metadata"),
     path(
         "manage/password_reset/",
         auth_views.PasswordResetView.as_view(extra_context={"site_header": admin.site.site_header}),

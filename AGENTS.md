@@ -58,14 +58,15 @@ Run `just format` to auto-format code and `just check` to review code and review
 
 ## 5. Directory Structure & File References
 
-| Directory | Purpose | Key Files |
-|-----------|---------|-----------|
-| `app/`    | Base functionality | `models.py` (BaseModel), `middleware.py`, `utils.py` |min.py` |
-| `templates/` | Django templates | Base templates and app-specific templates |
+| Directory    | Purpose                        | Key Files                                            |
+|--------------|--------------------------------|------------------------------------------------------|
+| `mybooks/`   | Base and generic functionality | `models.py` (BaseModel), `middleware.py`, `utils.py` |
+| `books`      | Application functionality      |                                                      |
+| `templates/` | Django templates               | Base templates and app-specific templates            |
 
 **Important Files**:
 
-- `app/settings.py`: Django settings
+- `mybooks/settings.py`: Django settings
 - `justfile`: Just task definitions
 - `pyproject.toml`: Dependencies and tool configurations
 

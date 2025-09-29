@@ -126,7 +126,7 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all()
     serializer_class = UserSerializer
     permission_classes = [IsAuthenticatedOrTokenHasScope]
-    required_scopes = ["users"]
+    required_scopes = ["read", "write"]
 
     # Filter configuration matching books/views.py pattern
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
@@ -151,32 +151,6 @@ class UserViewSet(viewsets.ModelViewSet):
         if self.action == "retrieve":
             return UserDetailSerializer
         return UserSerializer
-
-    @extend_schema(
-        responses={
-            200: OpenApiResponse(
-                description="Recently joined users",
-                response={
-                    "type": "object",
-                    "properties": {
-                        "count": {"type": "integer", "description": "Number of recent users"},
-                        "recent_users": {
-                            "type": "array",
-                            "items": {"$ref": "#/components/schemas/User"},
-                            "description": "List of recently joined users",
-                        },
-                    },
-                },
-            )
-        },
-        description="Get the 10 most recently joined users in the system",
-    )
-    @action(detail=False, methods=["get"])
-    def recent(self, request):
-        """Get recently joined users."""
-        recent_users = self.get_queryset().order_by("-date_joined")[:10]
-        serializer = self.get_serializer(recent_users, many=True)
-        return Response({"count": len(serializer.data), "recent_users": serializer.data})
 
 
 @extend_schema_view(
@@ -210,7 +184,7 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
     permission_classes = [IsAuthenticatedOrTokenHasScope]
-    required_scopes = ["groups"]
+    required_scopes = ["read", "write"]
 
     # Filter configuration matching books/views.py pattern
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]

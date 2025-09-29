@@ -50,7 +50,7 @@ def oauth_flow_test(request):
 
     context = {
         "registration_data": registration_data,
-        "site_url": settings.SITE_URL,
+        "oauth_metadata_url": request.build_absolute_uri(reverse("oauth-metadata")),
         "oauth_state": request.session.get("oauth_state"),
         "applications": applications,
         "code_challenge": code_challenge,

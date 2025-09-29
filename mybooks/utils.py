@@ -45,7 +45,7 @@ def get_oauth_server_metadata() -> dict:
         "introspection_endpoint": f"{base_url}{reverse('oauth2_provider:introspect')}",
         "jwks_uri": f"{base_url}{reverse('oauth2_provider:jwks-info')}",
         "revocation_endpoint": f"{base_url}{reverse('oauth2_provider:revoke-token')}",
-        "scopes_supported": ["read", "write", "users", "groups"],
+        "scopes_supported": ["read", "write"],
         "response_types_supported": ["code"],
         "response_modes_supported": ["query"],
         "grant_types_supported": ["authorization_code", "refresh_token"],

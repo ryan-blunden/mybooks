@@ -276,9 +276,11 @@
     </div>
 
     <div class="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border border-gray-200 dark:border-gray-700">
-        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">OAuth Server Details</h3>
-        <div>
-        <pre class="bg-gray-100 dark:bg-gray-900 rounded p-4 text-sm font-mono overflow-x-auto border border-gray-200 dark:border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">OAuth Server Details</h3>
+        <p class="text-gray-600 dark:text-gray-50">
+            <a href="{{ oauth_metadata_url }}" class="block mt-2 mb-4 font-medium text-blue-600 dark:text-blue-500 hover:underline">{{ oauth_metadata_url }}</a>
+        </p>
+        <pre class="block bg-gray-100 dark:bg-gray-900 rounded p-4 text-sm font-mono overflow-x-auto border border-gray-200 dark:border-gray-700">
 {{ oauth_server_metadata }}</pre>
     </div>
 </div>
