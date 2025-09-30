@@ -49,11 +49,13 @@
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/.venv/bin/streamlit",
-      "args": ["run", "agent/agent.py"],
+      "args": ["run", "agent/agent.py", "--server.port", "9090"],
       "console": "integratedTerminal",
       "justMyCode": false,
       "env": {
-        "DOPPLER_ENV": "1"
+        "DOPPLER_ENV": "1",
+        "DOPPLER_CONFIG": "dev_agent",
+        "PYTHONPATH": ".:${workspaceFolder}"
       }
     },
   ]

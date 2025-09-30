@@ -57,16 +57,19 @@ app-api-spec:
     uv run manage.py spectacular --file openapi.yaml --format openapi
     @echo "API spec saved to openapi.yaml"
 
-# app-load-base-data:
 
+app-ngrok:
+    ngrok http --url mybooks.ngrok.app 8080
 
 app-collectstatic:
    uv run manage.py tailwind build
    uv run manage.py collectstatic --no-input -i node_modules -i source.css
 
-
 streamlit:
-    streamlit run agent/agent.py
+    doppler run --config dev_agent -- streamlit run agent/agent.py --server.port 9090
+
+streamlit-ngrok:
+    ngrok http --url mybooks-agent.ngrok.app 9090
 
 ##########
 # CHECKS #
