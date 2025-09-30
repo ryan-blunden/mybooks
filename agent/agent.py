@@ -322,7 +322,7 @@ def render_connection_setup() -> None:
         else:
             client_name = st.session_state.get("pending_client_name")
             if not isinstance(client_name, str):
-                client_name = f"Streamlit Agent {uuid.uuid4().hex[:6]}"
+                client_name = f"MyBooks Agent {uuid.uuid4().hex[:6]}"
                 st.session_state.pending_client_name = client_name
                 st.session_state["pending_client_name_input"] = client_name
 
@@ -565,7 +565,7 @@ def render_sidebar() -> None:
             st.rerun()
 
         st.divider()
-        st.subheader("Agent Info")
+        st.subheader("Agent Config")
         st.write({"prompt": SYSTEM_PROMPT, "model": MODEL_NAME})
 
         st.divider()
@@ -677,7 +677,7 @@ def handle_chat_turn(prompt: str) -> None:
 
             tool_activity, tool_call_detected = extract_tool_activity(result.new_messages())
             if tool_call_detected and tool_activity:
-                with st.expander("🔬 Agent Activity", expanded=False):
+                with st.expander("Agent Activity", expanded=False):
                     for entry in tool_activity:
                         st.markdown(entry)
 
