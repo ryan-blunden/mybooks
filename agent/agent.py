@@ -10,9 +10,9 @@ import httpx
 import oauth_flow
 import requests
 import streamlit as st
-from app_data_store import AppData, AppDataStore, UserAuthState  # noqa: E402
+from app_data_store import AppData, AppDataStore, UserAuthState
 from dotenv import load_dotenv
-from oauth import discover_oauth_metadata  # noqa: E402
+from oauth import OAuthDiscoveryError, discover_oauth_metadata
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStreamableHTTP
 from pydantic_ai.messages import (
@@ -25,6 +25,7 @@ from pydantic_ai.messages import (
     ToolCallPart,
     ToolReturnPart,
 )
+from utils import first_query_value, truncate
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only
     pass
@@ -48,7 +49,13 @@ OAUTH_SERVER_URL = os.environ["OAUTH_SERVER_URL"]
 REDIRECT_URI = APP_URL
 OAUTH_SCOPE = "read write"
 OAUTH_USER_AUTH_CLIENT_ID = os.environ.get("OAUTH_USER_AUTH_CLIENT_ID")
-OAUTH_METADATA = discover_oauth_metadata(OAUTH_SERVER_URL)
+
+try:
+    OAUTH_METADATA = discover_oauth_metadata(OAUTH_SERVER_URL)
+except OAuthDiscoveryError as e:
+    OAUTH_METADATA = None
+    st.error(str(e))
+    st.stop()
 
 # AGENT
 SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", "You are a helpful assistant. Use tools if needed.")
@@ -82,22 +89,10 @@ MODEL_RESPONSE_SPINNER = """
 """
 
 
-def truncate(text: str, length: int) -> str:
-    return text if len(text) <= length else text[: length - 3] + "..."
-
-
 def get_app_data() -> AppData:
     if CURRENT_APP_DATA is None:
         raise RuntimeError("App data not initialized")
     return CURRENT_APP_DATA
-
-
-def first_query_value(raw: Any) -> Optional[str]:
-    if raw is None:
-        return None
-    if isinstance(raw, (list, tuple)):
-        return str(raw[0]) if raw else None
-    return str(raw)
 
 
 def set_oauth_notice(level: str, message: str) -> None:
@@ -323,8 +318,8 @@ def render_connection_setup() -> None:
                 trigger_browser_redirect(authorize_url)
 
         else:
-            st.success("Signed in")
-            st.button("Sign out", on_click=reset_login_tokens, use_container_width=True)
+            st.success("Signed in successfully.")
+            st.button("Sign Out", on_click=reset_login_tokens, use_container_width=True)
 
     with st.container():
         st.markdown("#### 2. Dynamic Client Registration")
@@ -400,7 +395,7 @@ def render_connection_setup() -> None:
         if not client_registered:
             st.info("Register the client before requesting authorization.")
         elif client_authorized:
-            st.success("Client authorized. MCP calls will use the stored access token.")
+            st.success("Client authorized successfully.")
             st.button(
                 "Reset authorization tokens",
                 on_click=reset_agent_authorization,
@@ -518,8 +513,11 @@ def flatten_exceptions(exc: BaseException) -> List[BaseException]:
     return [exc]
 
 
-def init_state() -> None:
+def init() -> None:
     """Bootstrap Streamlit session state for chat + agent."""
+
+    st.set_page_config(page_title="MCP OAuth 2.1 with PKCE and DCR", page_icon="🤖")
+    st.title("MCP OAuth 2.1 with PKCE and DCR")
 
     active_user_id = st.session_state.get("active_user_id")
 
@@ -691,10 +689,7 @@ def handle_chat_turn(prompt: str) -> None:
         asyncio.run(run_agent())
 
 
-st.set_page_config(page_title="MCP OAuth 2.1 with PKCE and DCR", page_icon="🤖")
-st.title("MCP OAuth 2.1 with PKCE and DCR")
-
-init_state()
+init()
 
 process_oauth_callback()
 

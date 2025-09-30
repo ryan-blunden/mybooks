@@ -53,10 +53,12 @@ def discover_oauth_metadata(oauth_server_url: str) -> OAuthMetadata:
     try:
         response = requests.get(oauth_metadata_endpoint, timeout=10)
     except requests.RequestException as exc:  # pragma: no cover - network failure path
-        raise OAuthDiscoveryError(f"OAuth discovery failed: {exc}") from exc
+        raise OAuthDiscoveryError(f"OAuth discovery failed for {oauth_server_url}: {exc}") from exc
 
     if response.status_code != 200:
-        raise OAuthDiscoveryError(f"OAuth discovery failed: {response.status_code} {response.reason}")  # pragma: no cover - unexpected status
+        raise OAuthDiscoveryError(
+            f"OAuth discovery failed for {oauth_server_url}: {response.status_code} {response.reason}"
+        )  # pragma: no cover - unexpected status
 
     data = response.json()
     if not isinstance(data, Mapping):
