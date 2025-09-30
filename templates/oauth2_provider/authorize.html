@@ -1,22 +1,22 @@
 {% extends "base.html" %}
-{# AIDEV-NOTE: DOT authorize override mirrors default flow with Flowbite card styling and base layout. #}
+{# AIDEV-NOTE: Authorization view styled to mirror Sentry MCP inspector for richer OAuth consent UX. #}
 {% load i18n %}
 
 {% block title %}{% trans "Authorize Application" %}{% endblock %}
-{% block body_classes %}bg-gray-50 dark:bg-gray-900{% endblock %}
+{% block body_classes %}bg-slate-950 text-slate-100{% endblock %}
 
 {% block body %}
-    <div class="min-h-screen flex mt-24 justify-center py-16 px-4">
-        <div class="w-full max-w-lg">
+    <div class="min-h-screen flex items-center justify-center py-16 px-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div class="w-full max-w-4xl">
             {% if not error %}
-                <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg rounded-2xl p-8">
-                    <form id="authorizationForm" method="post" class="space-y-6">
-                        <div>
-                            <h1 class="text-2xl font-semibold text-gray-900 dark:text-white">
-                                {% blocktrans with app_name=application.name %}Authorize {{ app_name }}?{% endblocktrans %}
+                <div class="rounded-3xl border border-slate-700/70 bg-slate-900/70 shadow-xl backdrop-blur">
+                    <form id="authorizationForm" method="post" class="p-8 sm:p-12 space-y-10">
+                        <div class="space-y-4">
+                            <h1 class="text-3xl font-semibold text-white sm:text-4xl">
+                                {% blocktrans with app_name=application.name %}{{ app_name }} is requesting access{% endblocktrans %}
                             </h1>
-                            <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
-                                {% trans "Application requires the following permissions" %}
+                            <p class="text-base text-slate-300">
+                                {% trans "Review the details below. Approving will redirect you back to the requesting application." %}
                             </p>
                         </div>
 
@@ -27,45 +27,76 @@
                             {% endif %}
                         {% endfor %}
 
-                        {% if scopes_descriptions %}
-                            <ul class="space-y-2 ps-5 text-sm text-gray-700 dark:text-gray-200 list-disc">
-                                {% for scope in scopes_descriptions %}
-                                    <li>{{ scope }}</li>
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
+                        <div class="grid gap-6 sm:grid-cols-2 text-sm text-slate-200">
+                            <div class="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 sm:col-span-2">
+                                <p class="text-xs uppercase tracking-wider text-slate-400">{% trans "Name" %}</p>
+                                <p class="mt-2 text-lg font-medium text-white break-words">{{ application.name }}</p>
+                            </div>
+                            <div class="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 sm:col-span-2">
+                                <p class="text-xs uppercase tracking-wider text-slate-400">{% trans "Redirect URIs" %}</p>
+                                <div class="mt-2 text-base text-slate-200/90">
+                                    {{ application.redirect_uris|default:_("No redirect URIs configured") }}
+                                </div>
+                            </div>
+                            <div class="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 sm:col-span-2">
+                                <p class="text-xs uppercase tracking-wider text-slate-400">{% trans "Client ID" %}</p>
+                                <p class="mt-2 font-mono text-base text-indigo-300">{{ application.client_id }}</p>
+                            </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <h2 class="text-xl font-semibold text-white">{% trans "Permissions" %}</h2>
+                            {% if scopes_descriptions %}
+                                <div class="space-y-3">
+                                    {% for scope in scopes_descriptions %}
+                                        <div class="flex items-start gap-3 rounded-2xl border border-indigo-500/40 bg-indigo-500/10 px-4 py-3">
+                                            <span class="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
+                                                <svg class="h-4 w-4 text-emerald-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                                    <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.001 7a1 1 0 0 1-1.414 0l-3.001-3a1 1 0 0 1 1.414-1.414l2.294 2.293 6.294-6.293a1 1 0 0 1 1.408 0Z" clip-rule="evenodd" />
+                                                </svg>
+                                            </span>
+                                            <p class="text-sm text-slate-100">{{ scope }}</p>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% else %}
+                                <p class="text-sm text-slate-300">
+                                    {% trans "This application is not requesting any additional permissions." %}
+                                </p>
+                            {% endif %}
+                        </div>
 
                         {% if form.errors or form.non_field_errors %}
-                            <div class="text-sm text-red-600 dark:text-red-400 space-y-1">
+                            <div class="rounded-2xl border border-red-500/60 bg-red-500/10 p-4 text-sm text-red-300">
                                 {{ form.errors }}
                                 {{ form.non_field_errors }}
                             </div>
                         {% endif %}
 
-                        <div class="flex flex-col sm:flex-row sm:justify-end gap-3 pt-4">
+                        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                             <input
                                 type="submit"
-                                class="w-full sm:w-auto inline-flex justify-center items-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-100 focus:outline-none focus:ring-4 focus:ring-gray-200 dark:border-gray-600 dark:bg-transparent dark:text-gray-200 dark:hover:bg-gray-700 dark:focus:ring-gray-700"
+                                class="w-full sm:w-auto inline-flex justify-center rounded-xl border border-slate-700/70 bg-transparent px-6 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/80"
                                 value="{% trans 'Cancel' %}"
                             />
                             <input
                                 type="submit"
                                 name="allow"
-                                class="w-full sm:w-auto inline-flex justify-center items-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-800 hover:cursor-pointer"
+                                class="w-full sm:w-auto inline-flex justify-center rounded-xl bg-indigo-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 hover:cursor-pointer"
                                 value="{% trans 'Authorize' %}"
                             />
                         </div>
                     </form>
                 </div>
             {% else %}
-                <div class="bg-white dark:bg-gray-800 border border-red-200 dark:border-red-800 shadow-lg rounded-2xl p-8">
-                    <h1 class="text-2xl font-semibold text-red-700 dark:text-red-400 mb-2">
+                <div class="rounded-3xl border border-red-500/60 bg-red-900/40 shadow-xl backdrop-blur p-10">
+                    <h1 class="text-2xl font-semibold text-red-200 mb-2">
                         {% trans "Authorization Error" %}
                     </h1>
-                    <p class="text-sm text-gray-700 dark:text-gray-200">
+                    <p class="text-sm text-red-100">
                         <span class="font-medium">{% trans "Error" %}:</span> {{ error.error }}
                     </p>
-                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">{{ error.description }}</p>
+                    <p class="mt-2 text-sm text-red-100/80">{{ error.description }}</p>
                 </div>
             {% endif %}
         </div>

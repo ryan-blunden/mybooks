@@ -6,24 +6,50 @@ import requests
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from oauth2_provider.models import Application
+from oauth2_provider.models import AccessToken, Application
 from oauth_dcr.views import DynamicClientRegistrationView
 
 from mybooks.utils import build_code_challenge, get_code_verifier, get_oauth_server_metadata
 
 
 @method_decorator(csrf_exempt, name="dispatch")
-class UserOwnedDynamicClientRegistrationView(LoginRequiredMixin, DynamicClientRegistrationView):
+class UserOwnedDynamicClientRegistrationView(DynamicClientRegistrationView):
     """Login-gated DCR endpoint that associates new apps with the requesting user."""
 
     # AIDEV-NOTE: DCR apps must retain a reference to the owner; do not remove user assignment.
+    def dispatch(self, request, *args, **kwargs):
+        authenticated_user = self._resolve_authenticated_user(request)
+        if authenticated_user is None:
+            return JsonResponse({"detail": "Authentication required for dynamic client registration."}, status=403)
+
+        request.user = authenticated_user
+        setattr(request, "_cached_user", authenticated_user)
+        return super().dispatch(request, *args, **kwargs)
+
+    def _resolve_authenticated_user(self, request):
+        user = request.user if request.user.is_authenticated else None
+        if user is not None:
+            return user
+
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            parts = auth_header.split(None, 1)
+            token_value = parts[1].strip() if len(parts) == 2 else ""
+            if token_value:
+                try:
+                    oauth_token = AccessToken.objects.select_related("user").get(token=token_value)
+                except AccessToken.DoesNotExist:
+                    return None
+                if not oauth_token.is_expired():
+                    return oauth_token.user
+        return None
+
     def _create_application(self, metadata):
         """Persist the application with the authenticated owner."""
         application = super()._create_application(metadata)
@@ -167,7 +193,7 @@ def authorize(request):
         "response_type": "code",
         "client_id": client_id,
         "redirect_uri": redirect_uri,
-        "scope": "read write groups",
+        "scope": "read write",
         "state": state,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
