@@ -163,6 +163,7 @@ class AuthorizationFlow:
             "code_challenge": state.code_challenge,
             "code_challenge_method": state.code_challenge_method,
         }
+        
         return f"{authorization_endpoint}?{urlencode(params)}"
 
     def complete(

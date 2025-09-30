@@ -407,7 +407,17 @@ REST_FRAMEWORK = {
 OAUTH2_PROVIDER = {
     # this is the list of available scopes
     "ALLOWED_SCHEMES": ["http", "https"] if DEBUG else ["https"],
-    "SCOPES": {"read": "Read scope", "write": "Write scope"},
+    "OIDC_ENABLED": os.environ.get("OAUTH_OIDC_RSA_PRIVATE_KEY") is not None,
+    "OIDC_RSA_PRIVATE_KEY": os.environ.get("OAUTH_OIDC_RSA_PRIVATE_KEY"),
+    # "OAUTH2_VALIDATOR_CLASS": "mybooks.oauth_validators.CustomOAuth2Validator",
+    # "SCOPES": {"read": "Read scope", "write": "Write scope"},
+    "SCOPES": {
+        "read": "Read access",
+        "write": "Write access",
+        "openid": "OIDC identity",
+        "profile": "Basic profile info",
+        "email": "Email address",
+    },
     # Allow PKCE without client authentication
     "PKCE_REQUIRED": False,
     "ALLOW_UNSAFE_CONFIDENTIAL_PKCE": True,
@@ -458,10 +468,10 @@ SPECTACULAR_SETTINGS = {
     "OAUTH2_AUTHORIZATION_URL": f"{SITE_URL}/oauth/authorize/",
     "OAUTH2_TOKEN_URL": f"{SITE_URL}/oauth/token/",
     "OAUTH2_REFRESH_URL": f"{SITE_URL}/oauth/token/",
-    "OAUTH2_SCOPES": {
-        "read": "Read scope",
-        "write": "Write scope",
-    },
+    # "OAUTH2_SCOPES": {
+    #     "read": "Read scope",
+    #     "write": "Write scope",
+    # },
     # "SECURITY": [{"oauth2": []}, {"tokenAuth": []}],
 }
 

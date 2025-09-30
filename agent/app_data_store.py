@@ -3,17 +3,26 @@
 from __future__ import annotations
 
 import json
+import threading
+import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import streamlit
+from streamlit_cookies_controller import CookieController as StreamlitCookieController
+
+CURRENT_USER_KEY: Optional[str] = None
+USER_COOKIE_NAME = "mybooks-agent-user"
+USER_COOKIE_SESSION_KEY = "agent_user_identifier"
+USER_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 _AGENT_DIR = Path(__file__).resolve().parent
-_DEFAULT_FILE = _AGENT_DIR / ".app_data.json"
 _UNSET = object()
 
 
 @dataclass
 class AppData:
+    user_session_key: Optional[str] = None
     user_access_token: Optional[str] = None
     user_refresh_token: Optional[str] = None
     oauth_client_id: Optional[str] = None
@@ -22,6 +31,8 @@ class AppData:
     registration_access_token: Optional[str] = None
     registration_client_uri: Optional[str] = None
     registration_client_payload: Optional[Dict[str, Any]] = None
+
+    """Manage persistence of :class:`AppData` objects."""
 
     @classmethod
     def from_json(cls, payload: Dict[str, Any]) -> "AppData":
@@ -44,12 +55,14 @@ class AppData:
     def to_json(self) -> Dict[str, Any]:
         return asdict(self)
 
+    @property
     def user_auth(self) -> "UserAuthState":
         return UserAuthState(
             access_token=self.user_access_token,
             refresh_token=self.user_refresh_token,
         )
 
+    @property
     def app_auth(self) -> "AppAuthState":
         return AppAuthState(
             client_id=self.oauth_client_id,
@@ -61,39 +74,71 @@ class AppData:
 
 
 class AppDataStore:
-    """Manage persistence of :class:`AppData` objects."""
+    _instance: "AppDataStore | None" = None
+    _app_url: str = None
+    _app_data: AppData = None
+    _streamlit: streamlit = None
+    _user_session_key: str = None
+    _cookies: StreamlitCookieController = StreamlitCookieController()
 
-    @staticmethod
-    def _data_path() -> Path:
-        return _DEFAULT_FILE
+    def __new__(cls, *args, **kwargs):
+        if not hasattr(cls, "_lock"):
+            cls._lock = threading.Lock()
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._init_once(*args, **kwargs)  # optional hook for real init
+        return cls._instance
 
-    @classmethod
-    def load(cls) -> Optional[AppData]:
-        path = cls._data_path()
-        try:
-            raw = path.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            return None
+    def _init_once(self, app_url: str, streamlit: streamlit) -> None:
+        self._app_url = app_url
+        self._streamlit = streamlit
+        self._load()
 
-        try:
-            data = json.loads(raw)
-        except json.JSONDecodeError:
-            return None
+    def _load(self):
+        path = self._data_path()
+        if not path.exists():
+            self._app_data = AppData()
+            self.save()
 
-        if not isinstance(data, dict):
-            return None
+        raw = path.read_text(encoding="utf-8")
+        data = json.loads(raw)
 
-        return AppData.from_json(data)
+        self._app_data = AppData.from_json(data)
 
-    @classmethod
-    def save(cls, data: AppData) -> None:
-        payload = json.dumps(data.to_json(), indent=2, sort_keys=True)
-        cls._data_path().write_text(payload, encoding="utf-8")
+    @property
+    def app_data(self) -> AppData:
+        """Return the current app data."""
+        if self._app_data is None:
+            self._app_data = AppData()
+        return self._app_data
 
-    @classmethod
+    # AIDEV-NOTE: Cookie-backed ids partition persisted data per browser session pending proper subject identifiers.
+    @property
+    def user_key(self) -> str:
+        """Return the cookie-scoped identifier for the current browser session."""
+
+        if self._user_session_key:
+            return self._user_session_key
+
+        if self._cookies.get(USER_COOKIE_NAME):
+            self._user_session_key = self._cookies.get(USER_COOKIE_NAME)
+
+        self._user_session_key = uuid.uuid4().hex
+        self._cookies.set(USER_COOKIE_NAME, self._user_session_key)
+        return self._user_session_key
+
+    def _data_path(self) -> Path:
+        return _AGENT_DIR / f".session-{self.user_key}.json"
+
+    def save(self) -> None:
+        if self._app_data is None:
+            return
+        payload = json.dumps(self._app_data.to_json(), indent=2, sort_keys=True)
+        self._data_path().write_text(payload, encoding="utf-8")
+
     def update(
-        cls,
-        current: Optional[AppData],
+        self,
         *,
         user_access_token: Optional[str] | object = _UNSET,
         user_refresh_token: Optional[str] | object = _UNSET,
@@ -104,17 +149,16 @@ class AppDataStore:
         registration_client_uri: Optional[str] | object = _UNSET,
         registration_client_payload: Optional[Dict[str, Any]] | object = _UNSET,
     ) -> AppData:
-        base = current or AppData()
 
         payload = {
-            "user_access_token": base.user_access_token,
-            "user_refresh_token": base.user_refresh_token,
-            "oauth_client_id": base.oauth_client_id,
-            "oauth_access_token": base.oauth_access_token,
-            "oauth_refresh_token": base.oauth_refresh_token,
-            "registration_access_token": base.registration_access_token,
-            "registration_client_uri": base.registration_client_uri,
-            "registration_client_payload": base.registration_client_payload,
+            "user_access_token": self._app_data.user_access_token,
+            "user_refresh_token": self._app_data.user_refresh_token,
+            "oauth_client_id": self._app_data.oauth_client_id,
+            "oauth_access_token": self._app_data.oauth_access_token,
+            "oauth_refresh_token": self._app_data.oauth_refresh_token,
+            "registration_access_token": self._app_data.registration_access_token,
+            "registration_client_uri": self._app_data.registration_client_uri,
+            "registration_client_payload": self._app_data.registration_client_payload,
         }
 
         if user_access_token is not _UNSET:
@@ -134,13 +178,11 @@ class AppDataStore:
         if registration_client_payload is not _UNSET:
             payload["registration_client_payload"] = registration_client_payload
 
-        updated = AppData(**payload)
-        cls.save(updated)
-        return updated
+        self._app_data = AppData(**payload)
+        self.save()
 
-    @classmethod
-    def delete(cls) -> None:
-        cls._data_path().unlink(missing_ok=True)
+    def delete(self) -> None:
+        self._data_path().unlink(missing_ok=True)
 
 
 @dataclass(frozen=True)

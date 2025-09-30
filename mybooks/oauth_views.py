@@ -18,6 +18,11 @@ from oauth_dcr.views import DynamicClientRegistrationView
 from mybooks.utils import build_code_challenge, get_code_verifier, get_oauth_server_metadata
 
 
+def oauth_metadata(request):
+    """Provide OAuth2 provider metadata."""
+    return JsonResponse(get_oauth_server_metadata())
+
+
 @method_decorator(csrf_exempt, name="dispatch")
 class UserOwnedDynamicClientRegistrationView(DynamicClientRegistrationView):
     """Login-gated DCR endpoint that associates new apps with the requesting user."""
@@ -56,11 +61,6 @@ class UserOwnedDynamicClientRegistrationView(DynamicClientRegistrationView):
         application.user = self.request.user
         application.save(update_fields=["user"])
         return application
-
-
-def oauth_metadata(request):
-    """Provide OAuth2 provider metadata."""
-    return JsonResponse(get_oauth_server_metadata())
 
 
 @login_required
@@ -193,7 +193,7 @@ def authorize(request):
         "response_type": "code",
         "client_id": client_id,
         "redirect_uri": redirect_uri,
-        "scope": "read write",
+        "scope": "read write openid profile email",
         "state": state,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",

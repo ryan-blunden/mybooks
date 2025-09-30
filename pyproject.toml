@@ -31,6 +31,7 @@ dependencies = [
   "pydantic-ai>=1.0.10",
   "requests-oauthlib>=2.0.0",
   "honcho>=2.0.0",
+  "streamlit-cookies-controller>=0.0.4",
 ]
 
 [dependency-groups]
