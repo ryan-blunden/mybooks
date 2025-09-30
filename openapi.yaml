@@ -127,29 +127,6 @@ paths:
           description: Detailed user information
         '404':
           description: User not found
-    delete:
-      operationId: users_destroy
-      description: Delete a user account
-      summary: Delete user
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user.
-        required: true
-      tags:
-      - users
-      security:
-      - oauth2:
-        - read
-        - write
-      - tokenAuth: []
-      responses:
-        '204':
-          description: User successfully deleted
-        '404':
-          description: User not found
     put:
       operationId: users_update
       description: Update user information
@@ -221,6 +198,29 @@ paths:
           description: User successfully updated
         '400':
           description: Validation error
+        '404':
+          description: User not found
+    delete:
+      operationId: users_destroy
+      description: Delete a user account
+      summary: Delete user
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - oauth2:
+        - read
+        - write
+      - tokenAuth: []
+      responses:
+        '204':
+          description: User successfully deleted
         '404':
           description: User not found
   /api/groups/:
@@ -516,32 +516,6 @@ paths:
           description: Book details returned
         '404':
           description: Book not found
-    delete:
-      operationId: delete_book
-      description: Delete a book from the shared catalog. This destructive action
-        cascades to user collections, reading statuses, and reviews that reference
-        the book, so coordinate with dependent teams before removal. Use it only when
-        you intend to fully retire a title from availability. Returns 404 if the book
-        cannot be found.
-      summary: Delete book
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this book.
-        required: true
-      tags:
-      - books
-      security:
-      - oauth2:
-        - read
-      - tokenAuth: []
-      responses:
-        '204':
-          description: Book deleted
-        '404':
-          description: Book not found
     put:
       operationId: update_book
       description: Replace every editable field on an existing book, including title,
@@ -619,6 +593,32 @@ paths:
           description: Book partially updated
         '400':
           description: Validation error
+        '404':
+          description: Book not found
+    delete:
+      operationId: delete_book
+      description: Delete a book from the shared catalog. This destructive action
+        cascades to user collections, reading statuses, and reviews that reference
+        the book, so coordinate with dependent teams before removal. Use it only when
+        you intend to fully retire a title from availability. Returns 404 if the book
+        cannot be found.
+      summary: Delete book
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this book.
+        required: true
+      tags:
+      - books
+      security:
+      - oauth2:
+        - read
+      - tokenAuth: []
+      responses:
+        '204':
+          description: Book deleted
         '404':
           description: Book not found
   /api/user-books/:
@@ -767,40 +767,6 @@ paths:
             review if available
         '404':
           description: UserBook relationship not found in authenticated user's collection
-    delete:
-      operationId: remove_book_from_user_collection
-      description: Remove a book from the authenticated user's personal collection
-        using the userbook_id. This operation deletes the user-book relationship and
-        all associated tracking data (reading status, dates) but does NOT delete the
-        book itself from the system - other users can still have this book in their
-        collections and the book remains available for browsing and future additions.
-        Use this tool when a user wants to completely remove a book from their personal
-        library and stop tracking it. This action also removes any review the user
-        has written for this book, as reviews are tied to the user-book relationship.
-        The userbook_id identifies the specific relationship to delete. This is irreversible
-        - if the user wants the book back in their collection, they'll need to add
-        it again with a fresh tracking relationship. Requires user authentication
-        and ownership of the userbook relationship.
-      summary: Remove book from user's personal collection
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user book.
-        required: true
-      tags:
-      - user-books
-      security:
-      - oauth2:
-        - write
-      - tokenAuth: []
-      responses:
-        '204':
-          description: Book and all tracking data successfully removed from user's
-            collection
-        '404':
-          description: UserBook relationship not found in authenticated user's collection
     put:
       operationId: update_book_reading_status_in_collection
       description: Update the reading status and tracking information for a book in
@@ -848,6 +814,40 @@ paths:
             management
         '400':
           description: Validation error or invalid status transition
+        '404':
+          description: UserBook relationship not found in authenticated user's collection
+    delete:
+      operationId: remove_book_from_user_collection
+      description: Remove a book from the authenticated user's personal collection
+        using the userbook_id. This operation deletes the user-book relationship and
+        all associated tracking data (reading status, dates) but does NOT delete the
+        book itself from the system - other users can still have this book in their
+        collections and the book remains available for browsing and future additions.
+        Use this tool when a user wants to completely remove a book from their personal
+        library and stop tracking it. This action also removes any review the user
+        has written for this book, as reviews are tied to the user-book relationship.
+        The userbook_id identifies the specific relationship to delete. This is irreversible
+        - if the user wants the book back in their collection, they'll need to add
+        it again with a fresh tracking relationship. Requires user authentication
+        and ownership of the userbook relationship.
+      summary: Remove book from user's personal collection
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user book.
+        required: true
+      tags:
+      - user-books
+      security:
+      - oauth2:
+        - write
+      - tokenAuth: []
+      responses:
+        '204':
+          description: Book and all tracking data successfully removed from user's
+            collection
         '404':
           description: UserBook relationship not found in authenticated user's collection
   /api/authors/:
@@ -950,32 +950,6 @@ paths:
           description: Author details returned
         '404':
           description: Author not found
-    delete:
-      operationId: delete_author
-      description: Delete an author from the catalog. This is a destructive action
-        that cascades to all catalog books tied to the author and, by extension, to
-        user collections and reviews that depend on those books. Use this only when
-        you intentionally want to purge an author and every related record. Returns
-        404 if the author does not exist.
-      summary: Delete author
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this author.
-        required: true
-      tags:
-      - authors
-      security:
-      - oauth2:
-        - read
-      - tokenAuth: []
-      responses:
-        '204':
-          description: Author deleted
-        '404':
-          description: Author not found
     put:
       operationId: update_author
       description: Replace the entire author record with the supplied payload, including
@@ -1053,6 +1027,32 @@ paths:
           description: Author partially updated
         '400':
           description: Validation error
+        '404':
+          description: Author not found
+    delete:
+      operationId: delete_author
+      description: Delete an author from the catalog. This is a destructive action
+        that cascades to all catalog books tied to the author and, by extension, to
+        user collections and reviews that depend on those books. Use this only when
+        you intentionally want to purge an author and every related record. Returns
+        404 if the author does not exist.
+      summary: Delete author
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this author.
+        required: true
+      tags:
+      - authors
+      security:
+      - oauth2:
+        - read
+      - tokenAuth: []
+      responses:
+        '204':
+          description: Author deleted
         '404':
           description: Author not found
   /api/reviews/:
@@ -1187,38 +1187,6 @@ paths:
           description: Complete review details with associated book information
         '404':
           description: Review not found or not owned by authenticated user
-    delete:
-      operationId: delete_user_book_review
-      description: Permanently delete a review written by the authenticated user using
-        the review_id. This operation completely removes the review from the system
-        including the rating, text content, and all associated metadata. The action
-        is irreversible - if the user wants to review the book again, they will need
-        to create a completely new review. Use this tool when a user no longer wants
-        their review to be part of the book's review collection or wants to remove
-        their opinion from the system. This does not affect the book itself or the
-        user's collection relationship to the book - it only removes the review. The
-        book remains in the user's collection with whatever reading status it had.
-        The review_id must correspond to a review owned by the authenticated user.
-        Requires user authentication and ownership of the review.
-      summary: Permanently delete a book review
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this review.
-        required: true
-      tags:
-      - reviews
-      security:
-      - oauth2:
-        - write
-      - tokenAuth: []
-      responses:
-        '204':
-          description: Review permanently deleted from the system
-        '404':
-          description: Review not found or not owned by authenticated user
     put:
       operationId: update_user_book_review
       description: Update an existing review written by the authenticated user using
@@ -1310,6 +1278,38 @@ paths:
             management
         '400':
           description: Validation error or invalid field values
+        '404':
+          description: Review not found or not owned by authenticated user
+    delete:
+      operationId: delete_user_book_review
+      description: Permanently delete a review written by the authenticated user using
+        the review_id. This operation completely removes the review from the system
+        including the rating, text content, and all associated metadata. The action
+        is irreversible - if the user wants to review the book again, they will need
+        to create a completely new review. Use this tool when a user no longer wants
+        their review to be part of the book's review collection or wants to remove
+        their opinion from the system. This does not affect the book itself or the
+        user's collection relationship to the book - it only removes the review. The
+        book remains in the user's collection with whatever reading status it had.
+        The review_id must correspond to a review owned by the authenticated user.
+        Requires user authentication and ownership of the review.
+      summary: Permanently delete a book review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - reviews
+      security:
+      - oauth2:
+        - write
+      - tokenAuth: []
+      responses:
+        '204':
+          description: Review permanently deleted from the system
         '404':
           description: Review not found or not owned by authenticated user
   /api/genres/:
@@ -1986,9 +1986,9 @@ components:
       type: oauth2
       flows:
         authorizationCode:
-          authorizationUrl: https://hypolimnial-wai-modularly.ngrok-free.dev/oauth/authorize/
-          tokenUrl: https://hypolimnial-wai-modularly.ngrok-free.dev/oauth/token/
-          refreshUrl: https://hypolimnial-wai-modularly.ngrok-free.dev/oauth/token/
+          authorizationUrl: https://mybooks.ngrok.app/oauth/authorize/
+          tokenUrl: https://mybooks.ngrok.app/oauth/token/
+          refreshUrl: https://mybooks.ngrok.app/oauth/token/
           scopes:
             read: Read scope
             write: Write scope
@@ -1998,4 +1998,4 @@ components:
       name: Authorization
       description: Token-based authentication with required prefix "Token"
 servers:
-- url: https://hypolimnial-wai-modularly.ngrok-free.dev
+- url: https://mybooks.ngrok.app
