@@ -49,8 +49,9 @@ def _normalize_registration_endpoint(data: Mapping[str, Any]) -> str | None:
 def discover_oauth_metadata(oauth_server_url: str) -> OAuthMetadata:
     """Retrieve the OAuth discovery metadata and cache the result."""
 
+    oauth_metadata_endpoint = f"{oauth_server_url}/.well-known/oauth-authorization-server"
     try:
-        response = requests.get(oauth_server_url, timeout=10)
+        response = requests.get(oauth_metadata_endpoint, timeout=10)
     except requests.RequestException as exc:  # pragma: no cover - network failure path
         raise OAuthDiscoveryError(f"OAuth discovery failed: {exc}") from exc
 

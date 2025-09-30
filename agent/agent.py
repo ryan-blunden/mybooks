@@ -1,17 +1,18 @@
 import asyncio
+import html
 import json
 import os
-import secrets
-import sys
-from dataclasses import asdict, dataclass
+import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, ClassVar, Dict, List, Optional
-from urllib.parse import urlencode
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 import httpx
-import logfire
+import oauth_flow
+import requests
 import streamlit as st
+from app_data_store import AppData, AppDataStore, UserAuthState  # noqa: E402
 from dotenv import load_dotenv
+from oauth import discover_oauth_metadata  # noqa: E402
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStreamableHTTP
 from pydantic_ai.messages import (
@@ -31,42 +32,34 @@ if TYPE_CHECKING:  # pragma: no cover - type checking only
 # Build paths inside the project like this: BASE_DIR / "subdir".
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-if str(BASE_DIR) not in sys.path:
-    sys.path.insert(0, str(BASE_DIR))
-
-for bogus in ["agent", "agent/agent.py"]:
-    try:
-        sys.path.remove(bogus)
-    except ValueError:
-        pass
-
-if __package__ in {None, ""}:
-    __package__ = "agent"
-
-from .oauth import (  # noqa: E402
-    build_pkce_challenge,
-    discover_oauth_metadata,
-    exchange_code_for_tokens,
-    generate_pkce_pair,
-)
-
-# ------------------------
-# Streamlit + Agent configuration
-# ------------------------
-# AIDEV-NOTE: MCP_* env vars configure the streamable HTTP server used by the agent.
-
 DOTENV_PATH = BASE_DIR / ".env"
-APP_DATA_FILE = Path(__file__).resolve().parent / ".app_data.json"
-
 if DOTENV_PATH.exists():
     load_dotenv(DOTENV_PATH)
 else:
     load_dotenv()
 
+# APP
+APP_URL = os.environ["APP_URL"]
+CURRENT_APP_DATA: Optional[AppData] = None
+FORCE_RERUN_KEY = "_force_rerun"
 
-def truncate(text: str, length: int) -> str:
-    return text if len(text) <= length else text[: length - 3] + "..."
+# OAUTHhttps://mybooks.ngrok.app
+OAUTH_SERVER_URL = os.environ["OAUTH_SERVER_URL"]
+REDIRECT_URI = APP_URL
+OAUTH_SCOPE = "read write"
+OAUTH_USER_AUTH_CLIENT_ID = os.environ.get("OAUTH_USER_AUTH_CLIENT_ID")
+OAUTH_METADATA = discover_oauth_metadata(OAUTH_SERVER_URL)
 
+# AGENT
+SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", "You are a helpful assistant. Use tools if needed.")
+MODEL_NAME = os.environ["OPENAI_MODEL"]
+API_KEY = os.environ["OPENAI_API_KEY"]
+os.environ["OPENAI_API_KEY"] = os.environ["OPENAI_API_KEY"]
+
+# MCP
+MCP_SERVER_URL = os.environ["MCP_URL"]
+MCP_AUTH_KEY = os.environ.get("MCP_AUTH_KEY")
+MCP_AUTH_VALUE_PREFIX = os.environ.get("MCP_AUTH_VALUE_PREFIX", "")
 
 MODEL_RESPONSE_SPINNER = """
 <style>
@@ -85,88 +78,345 @@ MODEL_RESPONSE_SPINNER = """
     <div class="model-response-spinner__dot"></div>
     <div class="model-response-spinner__dot"></div>
   </div>
-
-  <span>Model is thinking…</span>
 </div>
 """
 
 
-# OAUTH
-OAUTH_SERVER = "http://localhost:8080/.well-known/oauth-authorization-server"
-REGISTER_FALLBACK_URL = "http://localhost:8080/oauth-apps/register"
-REDIRECT_URI = "http://localhost:8501"  # must match app URL
-OAUTH_SCOPE = "read write"
-
-# AGENT
-SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", "You are a helpful assistant. Use tools if needed.")
-MODEL_NAME = os.environ["OPENAI_MODEL"]
-API_KEY = os.environ["OPENAI_API_KEY"]
-os.environ["OPENAI_API_KEY"] = os.environ["OPENAI_API_KEY"]
-
-# MCP
-MCP_SERVER_URL = os.environ["MCP_URL"]
-MCP_AUTH_KEY = os.environ.get("MCP_AUTH_KEY")
-MCP_AUTH_VALUE_PREFIX = os.environ.get("MCP_AUTH_VALUE_PREFIX", "")
-
-if os.getenv("LOGFIRE_TOKEN"):
-    logfire.configure(token=os.getenv("LOGFIRE_TOKEN"), scrubbing=False)
-    logfire.instrument_pydantic_ai()
+def truncate(text: str, length: int) -> str:
+    return text if len(text) <= length else text[: length - 3] + "..."
 
 
-@dataclass
-class AppData:
-    oauth_client_id: str = None
-    oauth_access_token: Optional[str] = None
-    oauth_refresh_token: Optional[str] = None
+def get_app_data() -> AppData:
+    if CURRENT_APP_DATA is None:
+        raise RuntimeError("App data not initialized")
+    return CURRENT_APP_DATA
 
 
-class AppDataManager:
-    path: ClassVar[Path] = APP_DATA_FILE
-
-    @classmethod
-    def load(cls) -> AppData | None:
-        try:
-            raw = cls.path.read_text(encoding="utf-8")
-        except FileNotFoundError:
-            return None
-
-        try:
-            data = json.loads(raw)
-            if isinstance(data, dict):
-                return AppData(
-                    oauth_client_id=data.get("oauth_client_id"),
-                    oauth_access_token=data.get("oauth_access_token"),
-                    oauth_refresh_token=data.get("oauth_refresh_token"),
-                )
-        except json.JSONDecodeError:
-            pass
-
+def first_query_value(raw: Any) -> Optional[str]:
+    if raw is None:
         return None
+    if isinstance(raw, (list, tuple)):
+        return str(raw[0]) if raw else None
+    return str(raw)
 
-    @classmethod
-    def save(cls, data: AppData) -> None:
-        cls.path.write_text(json.dumps(asdict(data), indent=2, sort_keys=True), encoding="utf-8")
 
-    @classmethod
-    def update(
-        cls,
-        current: Optional[AppData],
-        *,
-        oauth_client_id: Optional[str] = None,
-        oauth_access_token: Optional[str] = None,
-        oauth_refresh_token: Optional[str] = None,
-    ) -> AppData:
-        base = current or AppData()
-        data = asdict(base)
-        if oauth_client_id is not None:
-            data["oauth_client_id"] = oauth_client_id
-        if oauth_access_token is not None:
-            data["oauth_access_token"] = oauth_access_token
-        if oauth_refresh_token is not None:
-            data["oauth_refresh_token"] = oauth_refresh_token
-        updated = AppData(**data)
-        cls.save(updated)
-        return updated
+def set_oauth_notice(level: str, message: str) -> None:
+    st.session_state["oauth_notice"] = {"level": level, "message": message}
+
+
+def consume_oauth_notice() -> None:
+    notice = st.session_state.pop("oauth_notice", None)
+    if not isinstance(notice, dict):
+        return
+
+    level = notice.get("level", "info")
+    message = notice.get("message")
+    if not message:
+        return
+
+    renderer = {
+        "success": st.success,
+        "info": st.info,
+        "warning": st.warning,
+        "error": st.error,
+    }.get(level, st.info)
+    renderer(message)
+
+
+def get_user_auth_state() -> UserAuthState:
+    """Return the persisted bootstrap login state."""
+
+    return get_app_data().user_auth()
+
+
+def schedule_rerun() -> None:
+    """Request a rerun outside of Streamlit callback execution."""
+
+    st.session_state[FORCE_RERUN_KEY] = True
+
+
+def trigger_browser_redirect(url: str) -> None:
+    """Instruct the browser to navigate to ``url`` in the current tab."""
+
+    # Ensure we deliver the redirect payload immediately and halt further rendering.
+    safe_url = html.escape(url, quote=True)
+    st.session_state.pop(FORCE_RERUN_KEY, None)
+    st.markdown(
+        f'<meta http-equiv="refresh" content="0; url={safe_url}">',
+        unsafe_allow_html=True,
+    )
+    st.stop()
+
+
+def update_login_state(access_token: Optional[str], refresh_token: Optional[str], user_id: Optional[str]) -> None:
+    """Persist bootstrap login tokens locally and in memory."""
+
+    identifier = (user_id or "").strip() or "default"
+
+    global CURRENT_APP_DATA
+    current = get_app_data()
+    updated = AppDataStore.update(
+        current,
+        user_id=identifier,
+        user_access_token=access_token,
+        user_refresh_token=refresh_token,
+    )
+    CURRENT_APP_DATA = updated
+    st.session_state.active_user_id = identifier
+
+
+def update_application_tokens(
+    *,
+    # AIDEV-NOTE: The agent caches both login tokens and app tokens separately; keep updates distinct.
+    access_token: Optional[str],
+    refresh_token: Optional[str],
+) -> None:
+    global CURRENT_APP_DATA
+    current = get_app_data()
+    updated = AppDataStore.update(
+        current,
+        oauth_access_token=access_token,
+        oauth_refresh_token=refresh_token,
+    )
+    CURRENT_APP_DATA = updated
+
+
+def process_oauth_callback() -> None:
+    """Handle OAuth authorization code callbacks for active flows."""
+
+    params = st.query_params
+    if not params:
+        return
+
+    code = first_query_value(params.get("code"))
+    if not code:
+        return
+
+    returned_state = first_query_value(params.get("state"))
+    if not returned_state:
+        set_oauth_notice("error", "OAuth callback missing state; restart the flow.")
+        st.query_params.clear()
+        oauth_flow.clear_all_flows()
+        st.rerun()
+
+    pending_flow = oauth_flow.find_flow_by_state(returned_state)
+    if not pending_flow:
+        set_oauth_notice("error", "Received OAuth callback without an active flow. Start over.")
+        st.query_params.clear()
+        oauth_flow.clear_all_flows()
+        st.rerun()
+
+    try:
+        tokens = oauth_flow.handle_authorization_callback(
+            name=pending_flow,
+            code=code,
+            returned_state=returned_state,
+            token_endpoint=OAUTH_METADATA.token_endpoint,
+        )
+    except oauth_flow.OAuthFlowError as exc:
+        set_oauth_notice("error", str(exc))
+        st.query_params.clear()
+        st.rerun()
+    except Exception as exc:
+        set_oauth_notice("error", f"OAuth exchange failed: {exc}")
+        st.query_params.clear()
+        st.rerun()
+
+    access_token = tokens.get("access_token")
+    refresh_token = tokens.get("refresh_token")
+
+    if not access_token:
+        set_oauth_notice("error", "Token response missing access token; restart the flow.")
+        st.query_params.clear()
+        st.rerun()
+
+    if pending_flow == oauth_flow.FLOW_USER_LOGIN:
+        # AIDEV-NOTE: DOT tokens do not expose subject identifiers; default to 'default' slug for per-user cache.
+        current_user_state = get_user_auth_state()
+        subject = tokens.get("sub") or current_user_state.user_id or "default"
+        update_login_state(access_token, refresh_token, subject)
+        set_oauth_notice("success", "Signed in successfully. You can now register a client application.")
+    elif pending_flow == oauth_flow.FLOW_APP_AUTHORIZE:
+        update_application_tokens(access_token=access_token, refresh_token=refresh_token)
+        set_oauth_notice("success", "Agent application authorized and tokens cached.")
+    else:
+        set_oauth_notice("warning", "OAuth callback handled but flow type was unrecognized.")
+
+    st.query_params.clear()
+    st.rerun()
+
+
+def reset_login_tokens() -> None:
+    """Clear cached login tokens and rerun the app."""
+
+    global CURRENT_APP_DATA
+    updated = AppDataStore.update(
+        get_app_data(),
+        user_access_token=None,
+        user_refresh_token=None,
+    )
+    CURRENT_APP_DATA = updated
+    st.session_state.active_user_id = updated.user_id
+    set_oauth_notice("info", "Cleared stored login tokens.")
+    oauth_flow.clear_all_flows()
+    schedule_rerun()
+
+
+def reset_agent_authorization(*, clear_registration: bool = False) -> None:
+    """Clear stored authorization tokens (and optionally registration metadata)."""
+
+    update_kwargs: Dict[str, Optional[str]] = {
+        "oauth_access_token": None,
+        "oauth_refresh_token": None,
+    }
+    if clear_registration:
+        update_kwargs.update(
+            {
+                "oauth_client_id": None,
+                "registration_access_token": None,
+                "registration_client_uri": None,
+            }
+        )
+
+    global CURRENT_APP_DATA
+    updated = AppDataStore.update(get_app_data(), **update_kwargs)
+    CURRENT_APP_DATA = updated
+
+    if clear_registration:
+        set_oauth_notice("info", "Cleared registration and authorization state.")
+    else:
+        set_oauth_notice("info", "Cleared stored authorization tokens. Re-authorize the client when ready.")
+
+    oauth_flow.clear_all_flows()
+    schedule_rerun()
+
+
+def render_connection_setup() -> None:
+    """Render the guided OAuth setup flow for the agent."""
+
+    consume_oauth_notice()
+
+    app_data = get_app_data()
+    user_state = get_user_auth_state()
+    app_state = app_data.app_auth()
+
+    # user_id = user_state.effective_user_id()
+    registration_endpoint = OAUTH_METADATA.registration_endpoint
+
+    user_authenticated = user_state.is_authenticated
+    client_registered = app_state.is_registered
+    client_authorized = app_state.is_authorized
+
+    with st.container():
+        st.markdown("#### 1. Sign In")
+        st.text("Uses an OAuth 2.0 authorization code flow to authenticate the user.")
+        if not user_authenticated:
+            authorize_url = oauth_flow.start_authorization_flow(
+                name=oauth_flow.FLOW_USER_LOGIN,
+                client_id=OAUTH_USER_AUTH_CLIENT_ID,
+                scope=OAUTH_SCOPE,
+                redirect_uri=REDIRECT_URI,
+                authorization_endpoint=OAUTH_METADATA.authorization_endpoint,
+                reuse_existing=True,
+            )
+            if st.button("Sign in with OAuth", use_container_width=True):
+                trigger_browser_redirect(authorize_url)
+
+        else:
+            st.success("Signed in")
+            st.button("Sign out", on_click=reset_login_tokens, use_container_width=True)
+
+    with st.container():
+        st.markdown("#### 2. Dynamic Client Registration")
+        st.text("Dynamically register a new client application if one doesn't exist.")
+        if not user_authenticated:
+            st.info("Sign in first to enable dynamic client registration.")
+        elif client_registered:
+            st.success(f"Client ID: {app_state.client_id}.")
+        else:
+            client_name = st.session_state.get("pending_client_name")
+            if not isinstance(client_name, str):
+                client_name = f"Streamlit Agent {uuid.uuid4().hex[:6]}"
+                st.session_state.pending_client_name = client_name
+
+            st.write(f"Proposed client name: `{client_name}`")
+
+            def register_client() -> None:
+                access_token = get_user_auth_state().access_token
+                if not access_token:
+                    set_oauth_notice("error", "Login expired; sign in again before registering.")
+                    return
+
+                try:
+                    client_data = oauth_flow.register_dynamic_client(
+                        registration_endpoint=registration_endpoint,
+                        access_token=access_token,
+                        client_name=client_name,
+                        redirect_uri=REDIRECT_URI,
+                        scope=OAUTH_SCOPE,
+                    )
+                except requests.HTTPError as exc:
+                    response = exc.response
+                    status = response.status_code if response is not None else "?"
+                    reason = response.reason if response is not None else ""
+                    snippet = ""
+                    if response is not None:
+                        body = (response.text or "").strip()
+                        snippet = body[:150] + ("…" if len(body) > 150 else "")
+                    message = f"Registration failed: {status} {reason}".rstrip()
+                    if snippet:
+                        message += f" — {snippet}"
+                    set_oauth_notice("error", message)
+                    return
+                except oauth_flow.OAuthFlowError as exc:
+                    set_oauth_notice("error", str(exc))
+                    return
+                except Exception as exc:
+                    set_oauth_notice("error", f"Registration failed: {exc}")
+                    return
+
+                client_id = client_data.get("client_id")
+                if not client_id:
+                    set_oauth_notice("error", "Registration response missing client_id.")
+                    return
+
+                global CURRENT_APP_DATA
+                updated = AppDataStore.update(
+                    get_app_data(),
+                    oauth_client_id=client_id,
+                    registration_access_token=client_data.get("registration_access_token"),
+                    registration_client_uri=client_data.get("registration_client_uri"),
+                )
+                CURRENT_APP_DATA = updated
+                st.session_state.pop("pending_client_name", None)
+                set_oauth_notice("success", "Client registered successfully.")
+                schedule_rerun()
+
+            st.button("Register OAuth client", on_click=register_client, use_container_width=True)
+
+    with st.container():
+        st.markdown("#### 3. Authorize Registered Application")
+        st.text("Uses an OAuth 2.0 authorization code with the dynamically registered application.")
+        if not client_registered:
+            st.info("Register the client before requesting authorization.")
+        elif client_authorized:
+            st.success("Client authorized. MCP calls will use the stored access token.")
+            st.button(
+                "Reset authorization tokens",
+                on_click=reset_agent_authorization,
+                use_container_width=True,
+            )
+        else:
+            authorize_url = oauth_flow.start_authorization_flow(
+                name=oauth_flow.FLOW_APP_AUTHORIZE,
+                client_id=app_state.client_id,
+                scope=OAUTH_SCOPE,
+                redirect_uri=REDIRECT_URI,
+                authorization_endpoint=OAUTH_METADATA.authorization_endpoint,
+                reuse_existing=True,
+            )
+            if st.button("Authorize registered client", use_container_width=True):
+                trigger_browser_redirect(authorize_url)
 
 
 def extract_tool_activity(messages: List[ModelMessage]) -> tuple[List[str], bool]:
@@ -268,46 +518,52 @@ def flatten_exceptions(exc: BaseException) -> List[BaseException]:
     return [exc]
 
 
-# ------------------------
-# Streamlit Setup
-# ------------------------
-st.set_page_config(page_title="MCP OAuth DCR Test", page_icon="🤖")
-st.title("MCP OAuth DCR Test")
-
-
 def init_state() -> None:
     """Bootstrap Streamlit session state for chat + agent."""
 
-    app_data: Optional[AppData] = AppDataManager.load()
-    st.session_state.app_data = app_data
+    active_user_id = st.session_state.get("active_user_id")
+
+    app_data: Optional[AppData] = None
+    if isinstance(active_user_id, str) and active_user_id:
+        app_data = AppDataStore.load(active_user_id)
+
+    if app_data is None:
+        app_data = AppDataStore.load()
+
+    if app_data is None:
+        app_data = AppData(user_id=active_user_id)
+
+    global CURRENT_APP_DATA
+    CURRENT_APP_DATA = app_data
+
+    resolved_user_id = app_data.user_id or (active_user_id if isinstance(active_user_id, str) else None)
+    if resolved_user_id:
+        st.session_state.active_user_id = resolved_user_id
 
     headers: Dict[str, str] = {}
-    token = (app_data.oauth_access_token if app_data else None) or ""
+    app_state = app_data.app_auth()
+    token = app_state.access_token or ""
+    mcp_server: Optional[MCPServerStreamableHTTP] = None
     if token:
-        # headers = {"Authorization": f"Bearer {token}"}
-        # value = f"{MCP_AUTH_HEADER_PREFIX}{token}" if MCP_AUTH_HEADER_PREFIX else token
         headers[MCP_AUTH_KEY] = f"{MCP_AUTH_VALUE_PREFIX}{token}"
-    mcp_server = MCPServerStreamableHTTP(url=MCP_SERVER_URL, headers=headers)
-    st.session_state.mcp_server = mcp_server
-    if "mcp_server_tools" not in st.session_state:
-        st.session_state.mcp_server_tools = None
-        st.session_state.mcp_server_tools_error = None
+        mcp_server = MCPServerStreamableHTTP(url=MCP_SERVER_URL, headers=headers)
+        st.session_state.mcp_server = mcp_server
 
-    agent = Agent(
-        model=MODEL_NAME,
-        toolsets=[mcp_server],
-        system_prompt=SYSTEM_PROMPT,
-    )
+    if mcp_server is None:
+        agent = Agent(
+            model=MODEL_NAME,
+            system_prompt=SYSTEM_PROMPT,
+        )
+    else:
+        agent = Agent(
+            model=MODEL_NAME,
+            toolsets=[mcp_server],
+            system_prompt=SYSTEM_PROMPT,
+        )
     st.session_state.agent = agent
-
-    oauth_metadata = discover_oauth_metadata(OAUTH_SERVER)
-    st.session_state.oauth_metadata = oauth_metadata
 
     if "messages" not in st.session_state:
         st.session_state.messages = []
-
-
-init_state()
 
 
 def render_sidebar() -> None:
@@ -327,193 +583,51 @@ def render_sidebar() -> None:
 
         st.divider()
         st.subheader("MCP Config")
-        tools_state = st.session_state.get("mcp_server_tools")
-        tools_error = st.session_state.get("mcp_server_tools_error")
-        if tools_state is None:
+        mcp_server = st.session_state.get("mcp_server")
+        tools: List[str] = []
+        tools_error = None
+        if mcp_server is not None:
             with st.spinner("Loading MCP tools list…"):
                 try:
                     tools = asyncio.run(st.session_state.mcp_server.list_tools())
                 except Exception as exc:  # pragma: no cover - Streamlit UI path
-                    tools_state = []
                     tools_error = truncate(str(exc), 120)
                 else:
-                    tools_state = [tool.name for tool in tools]
+                    tools = [tool.name for tool in tools]
                     tools_error = None
-            st.session_state.mcp_server_tools = tools_state
-            st.session_state.mcp_server_tools_error = tools_error
 
-        if tools_error:
-            tools_display: Any = f"Error: {tools_error}"
-        else:
-            tools_display = tools_state or []
-
+        tools_display: Any = f"Error: {tools_error}" if tools_error else tools
+        app_state = get_app_data().app_auth()
         st.write(
             {
-                "url": st.session_state.mcp_server.url,
+                "url": MCP_SERVER_URL,
+                "enabled": mcp_server is not None,
                 "auth_header_key": MCP_AUTH_KEY,
-                "auth_header_value": (
-                    truncate(st.session_state.app_data.oauth_access_token, 20)
-                    if st.session_state.app_data and st.session_state.app_data.oauth_access_token
-                    else "unset"
-                ),
+                "auth_header_value": (truncate(app_state.access_token, 20) if app_state.access_token else "unset"),
                 "tools": tools_display,
             }
         )
 
         st.divider()
         st.subheader("App Data")
-        app_data = st.session_state.get("app_data")
-
+        app_data = get_app_data()
+        user_state = app_data.user_auth()
+        app_state = app_data.app_auth()
         st.write(
             {
-                "client_id": app_data.oauth_client_id if app_data else "unset",
-                "access_token": truncate(app_data.oauth_access_token, 20) if app_data.oauth_access_token else "unset",
-                "refresh_token": truncate(app_data.oauth_refresh_token, 20) if app_data.oauth_refresh_token else "unset",
+                "user_id": user_state.effective_user_id(),
+                "login_token": truncate(user_state.access_token, 20) if user_state.access_token else "unset",
+                "client_id": app_state.client_id or "unset",
+                "access_token": truncate(app_state.access_token, 20) if app_state.access_token else "unset",
+                "refresh_token": truncate(app_state.refresh_token, 20) if app_state.refresh_token else "unset",
             }
         )
-
-
-render_sidebar()
-
-# ------------------------
-# OAuth Workflow
-# ------------------------
-metadata_error = st.session_state.get("oauth_metadata_error")
-metadata = st.session_state.get("oauth_metadata")
-
-if metadata_error:
-    st.error(f"OAuth discovery failed: {metadata_error}")
-elif metadata:
-    params = st.query_params
-
-    def first_value(raw: Any) -> str | None:
-        if raw is None:
-            return None
-        if isinstance(raw, (list, tuple)):
-            return raw[0]
-        return str(raw)
-
-    code = first_value(params.get("code"))
-    returned_state = first_value(params.get("state"))
-    processing_callback = bool(code)
-
-    register_url = metadata.registration_endpoint or REGISTER_FALLBACK_URL
-    st.markdown(
-        f'<a href="{register_url}" target="_blank" rel="noopener">📝 Register App</a>',
-        unsafe_allow_html=True,
-    )
-
-    stored_client_id = st.session_state.app_data.oauth_client_id
-    with st.form(key="client-id-form"):
-        client_id_input = st.text_input(
-            "OAuth Client ID",
-            stored_client_id or "",
-            help="Paste the client identifier generated after registration",
-        )
-        submitted = st.form_submit_button("Save Client ID")
-        if submitted:
-            client_id_value = client_id_input.strip() or None
-            new_app_data = AppDataManager.update(
-                st.session_state.app_data,
-                oauth_client_id=client_id_value,
-            )
-            st.session_state.app_data = new_app_data
-            if client_id_value:
-                st.session_state["oauth_client_id"] = client_id_value
-            else:
-                st.session_state.pop("oauth_client_id", None)
-            if client_id_value:
-                st.success("Client ID saved. Continue with authorization when ready.")
-            else:
-                st.info("Client ID cleared. Registration must be completed before continuing.")
-
-    client_id = st.session_state.get("oauth_client_id")
-    if client_id:
-        if "oauth_state" not in st.session_state:
-            st.session_state.oauth_state = secrets.token_urlsafe(24)
-
-        if "pkce_verifier" not in st.session_state or "pkce_challenge" not in st.session_state:
-            code_verifier, code_challenge, method = generate_pkce_pair()
-            st.session_state.pkce_verifier = code_verifier
-            st.session_state.pkce_challenge = code_challenge
-            st.session_state.pkce_method = method
-        elif not processing_callback:
-            challenge, method = build_pkce_challenge(st.session_state.pkce_verifier)
-            st.session_state.pkce_challenge = challenge
-            st.session_state.pkce_method = method
-
-        authorize_params = {
-            "response_type": "code",
-            "client_id": client_id,
-            "redirect_uri": REDIRECT_URI,
-            "scope": OAUTH_SCOPE,
-            "state": st.session_state.oauth_state,
-            "code_challenge": st.session_state.pkce_challenge,
-            "code_challenge_method": st.session_state.pkce_method,
-        }
-        authorize_url = f"{metadata.authorization_endpoint}?{urlencode(authorize_params)}"
-        st.markdown(
-            f'<a href="{authorize_url}" target="_blank" rel="noopener">🔐 Authorize Agent</a>',
-            unsafe_allow_html=True,
-        )
-
-    if code and client_id:
-        expected_state = st.session_state.get("oauth_state")
-        if expected_state and returned_state and returned_state != expected_state:
-            st.error(f"State mismatch detected. Expected {expected_state!r}, got {returned_state!r}. Restart the authorization flow.")
-        else:
-            code_verifier = st.session_state.get("pkce_verifier")
-            if not code_verifier:
-                st.error("PKCE verifier missing. Restart the authorization flow.")
-            else:
-                try:
-                    tokens = exchange_code_for_tokens(
-                        metadata.token_endpoint,
-                        authorization_code=code,
-                        client_id=client_id,
-                        redirect_uri=REDIRECT_URI,
-                        code_verifier=code_verifier,
-                        state=returned_state,
-                    )
-                except Exception as exc:  # pragma: no cover - Streamlit UI path
-                    st.error(f"Token exchange failed: {exc}")
-                else:
-                    access_token = tokens.get("access_token")
-                    if not access_token:
-                        st.error("Token response missing access token. Restart the flow.")
-                    else:
-                        st.session_state["access_token"] = access_token
-                        refresh_token = tokens.get("refresh_token")
-                        if refresh_token:
-                            st.session_state["refresh_token"] = refresh_token
-
-                        new_app_data = AppDataManager.update(
-                            st.session_state.app_data,
-                            oauth_client_id=client_id,
-                            oauth_access_token=access_token,
-                            oauth_refresh_token=refresh_token,
-                        )
-
-                        st.success("✅ Access token obtained")
-
-                        for key in [
-                            "oauth_state",
-                            "pkce_verifier",
-                            "pkce_challenge",
-                            "pkce_method",
-                        ]:
-                            st.session_state.pop(key, None)
-
-                        st.experimental_set_query_params()
 
 
 def render_chat_history(messages: List[Dict[str, str]]) -> None:
     for message in messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
-
-
-render_chat_history(st.session_state.messages)
 
 
 def handle_chat_turn(prompt: str) -> None:
@@ -576,6 +690,22 @@ def handle_chat_turn(prompt: str) -> None:
 
         asyncio.run(run_agent())
 
+
+st.set_page_config(page_title="MCP OAuth 2.1 with PKCE and DCR", page_icon="🤖")
+st.title("MCP OAuth 2.1 with PKCE and DCR")
+
+init_state()
+
+process_oauth_callback()
+
+render_sidebar()
+
+render_connection_setup()
+
+render_chat_history(st.session_state.messages)
+
+if st.session_state.pop(FORCE_RERUN_KEY, False):
+    st.rerun()
 
 if prompt := st.chat_input("Ask me something…"):
     handle_chat_turn(prompt)
