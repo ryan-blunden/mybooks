@@ -17,38 +17,14 @@ class OAuthDiscoveryError(RuntimeError):
 
 @dataclass(frozen=True)
 class OAuthMetadata:
-    """Resolved OAuth discovery document."""
-
     issuer: str
     authorization_endpoint: str
     token_endpoint: str
     registration_endpoint: str | None
 
 
-# def build_code_challenge(code_verifier: str) -> str:
-#     """Derive a PKCE code challenge from a verifier."""
-#     digest = hashlib.sha256(code_verifier.encode("utf-8")).digest()
-#     return base64.urlsafe_b64encode(digest).decode("utf-8").replace("=", "")
-
-
-# def get_code_verifier() -> Tuple[str, str]:
-#     """Generate a code verifier and its corresponding code challenge for OAuth 2.0 PKCE."""
-#     code_verifier = "".join(random.choice(string.ascii_uppercase + string.digits) for _ in range(random.randint(43, 128)))
-#     code_challenge = build_code_challenge(code_verifier)
-#     return code_verifier, code_challenge
-
-
-def _normalize_registration_endpoint(data: Mapping[str, Any]) -> str | None:
-    endpoint = data.get("registration_endpoint")
-    if isinstance(endpoint, str) and endpoint.strip():
-        return endpoint.strip()
-    return None
-
-
 @lru_cache(maxsize=1)
 def discover_oauth_metadata(oauth_server_url: str) -> OAuthMetadata:
-    """Retrieve the OAuth discovery metadata and cache the result."""
-
     oauth_metadata_endpoint = f"{oauth_server_url}/.well-known/oauth-authorization-server"
     try:
         response = requests.get(oauth_metadata_endpoint, timeout=10)
@@ -74,12 +50,11 @@ def discover_oauth_metadata(oauth_server_url: str) -> OAuthMetadata:
     if not issuer or not authorization_endpoint or not token_endpoint:
         raise OAuthDiscoveryError("OAuth discovery document returned empty endpoints")
 
-    registration_endpoint = _normalize_registration_endpoint(data)
     return OAuthMetadata(
         issuer=issuer,
         authorization_endpoint=authorization_endpoint,
         token_endpoint=token_endpoint,
-        registration_endpoint=registration_endpoint,
+        registration_endpoint=data.get("registration_endpoint", None),
     )
 
 

@@ -143,21 +143,17 @@ def trigger_browser_redirect(url: str) -> None:
     st.stop()
 
 
-def update_login_state(access_token: Optional[str], refresh_token: Optional[str], user_id: Optional[str]) -> None:
-    """Persist bootstrap login tokens locally and in memory."""
-
-    identifier = (user_id or "").strip() or "default"
+def update_login_state(access_token: Optional[str], refresh_token: Optional[str]) -> None:
+    """Persist bootstrap login tokens locally and in memory without relying on a user identifier."""
 
     global CURRENT_APP_DATA
     current = get_app_data()
     updated = AppDataStore.update(
         current,
-        user_id=identifier,
         user_access_token=access_token,
         user_refresh_token=refresh_token,
     )
     CURRENT_APP_DATA = updated
-    st.session_state.active_user_id = identifier
 
 
 def update_application_tokens(
@@ -226,10 +222,8 @@ def process_oauth_callback() -> None:
         st.rerun()
 
     if pending_flow == oauth_flow.FLOW_USER_LOGIN:
-        # AIDEV-NOTE: DOT tokens do not expose subject identifiers; default to 'default' slug for per-user cache.
-        current_user_state = get_user_auth_state()
-        subject = tokens.get("sub") or current_user_state.user_id or "default"
-        update_login_state(access_token, refresh_token, subject)
+        # AIDEV-NOTE: OAuth responses omit subject identifiers; cache login tokens without per-user partitioning.
+        update_login_state(access_token, refresh_token)
         set_oauth_notice("success", "Signed in successfully. You can now register a client application.")
     elif pending_flow == oauth_flow.FLOW_APP_AUTHORIZE:
         update_application_tokens(access_token=access_token, refresh_token=refresh_token)
@@ -251,7 +245,6 @@ def reset_login_tokens() -> None:
         user_refresh_token=None,
     )
     CURRENT_APP_DATA = updated
-    st.session_state.active_user_id = updated.user_id
     set_oauth_notice("info", "Cleared stored login tokens.")
     oauth_flow.clear_all_flows()
     schedule_rerun()
@@ -260,7 +253,7 @@ def reset_login_tokens() -> None:
 def reset_agent_authorization(*, clear_registration: bool = False) -> None:
     """Clear stored authorization tokens (and optionally registration metadata)."""
 
-    update_kwargs: Dict[str, Optional[str]] = {
+    update_kwargs: Dict[str, Any] = {
         "oauth_access_token": None,
         "oauth_refresh_token": None,
     }
@@ -270,6 +263,7 @@ def reset_agent_authorization(*, clear_registration: bool = False) -> None:
                 "oauth_client_id": None,
                 "registration_access_token": None,
                 "registration_client_uri": None,
+                "registration_client_payload": None,
             }
         )
 
@@ -295,14 +289,13 @@ def render_connection_setup() -> None:
     user_state = get_user_auth_state()
     app_state = app_data.app_auth()
 
-    # user_id = user_state.effective_user_id()
     registration_endpoint = OAUTH_METADATA.registration_endpoint
 
     user_authenticated = user_state.is_authenticated
     client_registered = app_state.is_registered
     client_authorized = app_state.is_authorized
 
-    with st.container():
+    with st.expander("Authentication and Authorization", expanded=True):
         st.markdown("#### 1. Sign In")
         st.text("Uses an OAuth 2.0 authorization code flow to authenticate the user.")
         if not user_authenticated:
@@ -316,12 +309,10 @@ def render_connection_setup() -> None:
             )
             if st.button("Sign in with OAuth", use_container_width=True):
                 trigger_browser_redirect(authorize_url)
-
         else:
             st.success("Signed in successfully.")
             st.button("Sign Out", on_click=reset_login_tokens, use_container_width=True)
 
-    with st.container():
         st.markdown("#### 2. Dynamic Client Registration")
         st.text("Dynamically register a new client application if one doesn't exist.")
         if not user_authenticated:
@@ -333,8 +324,17 @@ def render_connection_setup() -> None:
             if not isinstance(client_name, str):
                 client_name = f"Streamlit Agent {uuid.uuid4().hex[:6]}"
                 st.session_state.pending_client_name = client_name
+                st.session_state["pending_client_name_input"] = client_name
 
-            st.write(f"Proposed client name: `{client_name}`")
+            input_key = "pending_client_name_input"
+            if input_key not in st.session_state:
+                st.session_state[input_key] = client_name
+
+            name_input = st.text_input("Client name", key=input_key)
+            cleaned_name = name_input.strip()
+            effective_name = cleaned_name or client_name
+            st.session_state.pending_client_name = effective_name
+            client_name = effective_name
 
             def register_client() -> None:
                 access_token = get_user_auth_state().access_token
@@ -381,15 +381,16 @@ def render_connection_setup() -> None:
                     oauth_client_id=client_id,
                     registration_access_token=client_data.get("registration_access_token"),
                     registration_client_uri=client_data.get("registration_client_uri"),
+                    registration_client_payload=client_data,
                 )
                 CURRENT_APP_DATA = updated
                 st.session_state.pop("pending_client_name", None)
+                st.session_state.pop("pending_client_name_input", None)
                 set_oauth_notice("success", "Client registered successfully.")
                 schedule_rerun()
 
             st.button("Register OAuth client", on_click=register_client, use_container_width=True)
 
-    with st.container():
         st.markdown("#### 3. Authorize Registered Application")
         st.text("Uses an OAuth 2.0 authorization code with the dynamically registered application.")
         if not client_registered:
@@ -519,24 +520,12 @@ def init() -> None:
     st.set_page_config(page_title="MCP OAuth 2.1 with PKCE and DCR", page_icon="🤖")
     st.title("MCP OAuth 2.1 with PKCE and DCR")
 
-    active_user_id = st.session_state.get("active_user_id")
-
-    app_data: Optional[AppData] = None
-    if isinstance(active_user_id, str) and active_user_id:
-        app_data = AppDataStore.load(active_user_id)
-
+    app_data = AppDataStore.load()
     if app_data is None:
-        app_data = AppDataStore.load()
-
-    if app_data is None:
-        app_data = AppData(user_id=active_user_id)
+        app_data = AppData()
 
     global CURRENT_APP_DATA
     CURRENT_APP_DATA = app_data
-
-    resolved_user_id = app_data.user_id or (active_user_id if isinstance(active_user_id, str) else None)
-    if resolved_user_id:
-        st.session_state.active_user_id = resolved_user_id
 
     headers: Dict[str, str] = {}
     app_state = app_data.app_auth()
@@ -566,7 +555,7 @@ def init() -> None:
 
 def render_sidebar() -> None:
     """Display sidebar controls and quick info."""
-
+    app_data = get_app_data()
     with st.sidebar:
         st.subheader("Session")
         # st.caption("Prototype uses hard-coded model & API key. Later steps move these to env vars.")
@@ -577,7 +566,7 @@ def render_sidebar() -> None:
 
         st.divider()
         st.subheader("Agent Info")
-        st.write({"model": MODEL_NAME, "prompt": SYSTEM_PROMPT})
+        st.write({"prompt": SYSTEM_PROMPT, "model": MODEL_NAME})
 
         st.divider()
         st.subheader("MCP Config")
@@ -601,23 +590,33 @@ def render_sidebar() -> None:
                 "url": MCP_SERVER_URL,
                 "enabled": mcp_server is not None,
                 "auth_header_key": MCP_AUTH_KEY,
-                "auth_header_value": (truncate(app_state.access_token, 20) if app_state.access_token else "unset"),
+                "auth_header_value": (truncate(app_state.access_token, 20) if app_state.access_token else None),
                 "tools": tools_display,
             }
         )
 
+        if app_state.client_id:
+            st.divider()
+            st.subheader("Client Application")
+            client_payload = app_data.registration_client_payload or {}
+            client_info = {
+                "name": client_payload.get("client_name") or "unknown",
+                "client_id": app_state.client_id,
+                "redirect_uris": client_payload.get("redirect_uris") or app_data.registration_client_uri,
+                "grant_types": client_payload.get("grant_types"),
+            }
+            st.write(client_info)
+
         st.divider()
         st.subheader("App Data")
-        app_data = get_app_data()
         user_state = app_data.user_auth()
         app_state = app_data.app_auth()
         st.write(
             {
-                "user_id": user_state.effective_user_id(),
-                "login_token": truncate(user_state.access_token, 20) if user_state.access_token else "unset",
-                "client_id": app_state.client_id or "unset",
-                "access_token": truncate(app_state.access_token, 20) if app_state.access_token else "unset",
-                "refresh_token": truncate(app_state.refresh_token, 20) if app_state.refresh_token else "unset",
+                "login_token": truncate(user_state.access_token, 20) if user_state.access_token else None,
+                "client_id": app_state.client_id or None,
+                "access_token": truncate(app_state.access_token, 20) if app_state.access_token else None,
+                "refresh_token": truncate(app_state.refresh_token, 20) if app_state.refresh_token else None,
             }
         )
 
@@ -678,7 +677,7 @@ def handle_chat_turn(prompt: str) -> None:
 
             tool_activity, tool_call_detected = extract_tool_activity(result.new_messages())
             if tool_call_detected and tool_activity:
-                with st.expander("Agent Activity", expanded=False):
+                with st.expander("🔬 Agent Activity", expanded=False):
                     for entry in tool_activity:
                         st.markdown(entry)
 
