@@ -3,13 +3,11 @@
 from __future__ import annotations
 
 import json
-import threading
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-import streamlit
 from streamlit_cookies_controller import CookieController as StreamlitCookieController
 
 CURRENT_USER_KEY: Optional[str] = None
@@ -74,34 +72,30 @@ class AppData:
 
 
 class AppDataStore:
-    _instance: "AppDataStore | None" = None
-    _app_url: str = None
+    _instance: AppDataStore = None
     _app_data: AppData = None
-    _streamlit: streamlit = None
     _user_session_key: str = None
-    _cookies: StreamlitCookieController = StreamlitCookieController()
+    _session_file_path: Path = None
+    _cookies: StreamlitCookieController = None
 
-    def __new__(cls, *args, **kwargs):
-        if not hasattr(cls, "_lock"):
-            cls._lock = threading.Lock()
-        with cls._lock:
-            if cls._instance is None:
-                cls._instance = super().__new__(cls)
-                cls._instance._init_once(*args, **kwargs)  # optional hook for real init
-        return cls._instance
-
-    def _init_once(self, app_url: str, streamlit: streamlit) -> None:
-        self._app_url = app_url
-        self._streamlit = streamlit
+    def __init__(self, cookies: StreamlitCookieController) -> None:
+        self._cookies = cookies
         self._load()
 
     def _load(self):
-        path = self._data_path()
-        if not path.exists():
+        if self._cookies.get(USER_COOKIE_NAME):
+            self._user_session_key = self._cookies.get(USER_COOKIE_NAME)
+        else:
+            self._user_session_key = uuid.uuid4().hex
+            self._cookies.set(USER_COOKIE_NAME, self._user_session_key)
+
+        self._session_file_path = Path(_AGENT_DIR / f".session-{self._user_session_key}.json")
+
+        if not self._session_file_path.exists():
             self._app_data = AppData()
             self.save()
 
-        raw = path.read_text(encoding="utf-8")
+        raw = self._session_file_path.read_text(encoding="utf-8")
         data = json.loads(raw)
 
         self._app_data = AppData.from_json(data)
@@ -116,26 +110,13 @@ class AppDataStore:
     # AIDEV-NOTE: Cookie-backed ids partition persisted data per browser session pending proper subject identifiers.
     @property
     def user_key(self) -> str:
-        """Return the cookie-scoped identifier for the current browser session."""
-
-        if self._user_session_key:
-            return self._user_session_key
-
-        if self._cookies.get(USER_COOKIE_NAME):
-            self._user_session_key = self._cookies.get(USER_COOKIE_NAME)
-
-        self._user_session_key = uuid.uuid4().hex
-        self._cookies.set(USER_COOKIE_NAME, self._user_session_key)
         return self._user_session_key
-
-    def _data_path(self) -> Path:
-        return _AGENT_DIR / f".session-{self.user_key}.json"
 
     def save(self) -> None:
         if self._app_data is None:
             return
         payload = json.dumps(self._app_data.to_json(), indent=2, sort_keys=True)
-        self._data_path().write_text(payload, encoding="utf-8")
+        self._session_file_path.write_text(payload, encoding="utf-8")
 
     def update(
         self,

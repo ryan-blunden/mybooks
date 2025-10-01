@@ -1,4 +1,3 @@
-from django.utils import timezone
 from rest_framework import serializers
 
 from .models import Author, Book, Review, UserBook
@@ -107,8 +106,6 @@ class UserBookSerializer(serializers.ModelSerializer):
             "book_id",
             "reading_status",
             "date_added",
-            "date_started",
-            "date_finished",
             # Book creation fields
             "title",
             "author_name",
@@ -116,21 +113,11 @@ class UserBookSerializer(serializers.ModelSerializer):
             "tagline",
             "description",
         ]
-        read_only_fields = ["date_added", "date_started", "date_finished"]
+        read_only_fields = ["date_added"]
         extra_kwargs = {
             "id": {"help_text": "Unique identifier for this user-book relationship"},
             "reading_status": {"help_text": "Current reading status for this book"},
             "date_added": {"help_text": "When this book was added to the user's collection", "format": "date-time"},
-            "date_started": {
-                "help_text": "When the user started reading this book (auto-set when status changes to 'reading')",
-                "format": "date-time",
-                "allow_null": True,
-            },
-            "date_finished": {
-                "help_text": "When the user finished reading this book (auto-set when status changes to 'finished')",
-                "format": "date-time",
-                "allow_null": True,
-            },
             "book_id": {"help_text": "ID of existing book to add to collection"},
             "title": {"help_text": "Title for new book (used when creating book inline)"},
             "author_name": {"help_text": "Author name for new book (used when creating book inline)"},
@@ -185,25 +172,6 @@ class UserBookSerializer(serializers.ModelSerializer):
 
         validated_data["user"] = user
         return super().create(validated_data)
-
-    def update(self, instance, validated_data):
-        """Update UserBook with automatic date handling for status changes."""
-        old_status = instance.reading_status
-        new_status = validated_data.get("reading_status", old_status)
-
-        # Auto-set date_started when changing to 'reading'
-        if old_status != "reading" and new_status == "reading":
-            validated_data["date_started"] = timezone.now()
-
-        # Auto-set date_finished when changing to 'finished'
-        if old_status != "finished" and new_status == "finished":
-            validated_data["date_finished"] = timezone.now()
-
-        # Clear date_finished if changing away from 'finished'
-        if old_status == "finished" and new_status != "finished":
-            validated_data["date_finished"] = None
-
-        return super().update(instance, validated_data)
 
 
 class ReviewSerializer(serializers.ModelSerializer):

@@ -26,8 +26,7 @@ dev-get-tls:
 	doppler secrets get TLS_KEY --plain > tls/key.pem    
 
 dev-server:
-    uv run manage.py tailwind dev
-    # uv run manage.py runserver_plus [::]:8080
+    uv run manage.py runserver_plus [::]:8080
 
 dev-mail:
     npx maildev --smtp 1025 --web 1080 --ip 0.0.0.0
@@ -65,10 +64,10 @@ app-collectstatic:
    uv run manage.py tailwind build
    uv run manage.py collectstatic --no-input -i node_modules -i source.css
 
-streamlit:
-    doppler run --config dev_agent -- streamlit run agent/agent.py --server.port 9090
+agent-run:
+    doppler run --config dev_agent -- streamlit run agent/agent.py --server.port 9090 --logger.level info --server.headless true
 
-streamlit-ngrok:
+agent-ngrok:
     ngrok http --url mybooks-agent.ngrok.app 9090
 
 ##########

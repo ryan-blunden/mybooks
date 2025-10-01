@@ -2,6 +2,7 @@ import asyncio
 import html
 import json
 import os
+import time
 import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
@@ -25,6 +26,7 @@ from pydantic_ai.messages import (
     ToolCallPart,
     ToolReturnPart,
 )
+from streamlit_cookies_controller import CookieController as StreamlitCookieController
 from utils import first_query_value, truncate
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only
@@ -129,7 +131,7 @@ def trigger_browser_redirect(url: str) -> None:
         f'<meta http-equiv="refresh" content="0; url={safe_url}">',
         unsafe_allow_html=True,
     )
-    st.stop()
+    # st.stop()
 
 
 def process_oauth_callback() -> None:
@@ -182,13 +184,13 @@ def process_oauth_callback() -> None:
         st.rerun()
 
     if pending_flow == oauth_flow.FLOW_USER_LOGIN:
-        AppDataStore().update(
+        st.session_state.app_data_store.update(
             user_access_token=access_token,
             user_refresh_token=refresh_token,
         )
         set_oauth_notice("success", "Signed in successfully. You can now register a client application.")
     elif pending_flow == oauth_flow.FLOW_APP_AUTHORIZE:
-        AppDataStore().update(
+        st.session_state.app_data_store.update(
             oauth_access_token=access_token,
             oauth_refresh_token=refresh_token,
         )
@@ -203,7 +205,7 @@ def process_oauth_callback() -> None:
 def reset_login_tokens() -> None:
     """Clear cached login tokens and rerun the app."""
 
-    AppDataStore().update(
+    st.session_state.app_data_store.update(
         user_access_token=None,
         user_refresh_token=None,
     )
@@ -230,7 +232,7 @@ def reset_agent_authorization(*, clear_registration: bool = False) -> None:
             }
         )
 
-    AppDataStore().update(
+    st.session_state.app_data_store.update(
         **update_kwargs,
     )
 
@@ -248,8 +250,8 @@ def render_connection_setup() -> None:
 
     consume_oauth_notice()
 
-    user_state = AppDataStore().app_data.user_auth
-    app_state = AppDataStore().app_data.app_auth
+    user_state = st.session_state.app_data_store.app_data.user_auth
+    app_state = st.session_state.app_data_store.app_data.app_auth
 
     registration_endpoint = OAUTH_METADATA.registration_endpoint
 
@@ -300,7 +302,7 @@ def render_connection_setup() -> None:
             client_name = effective_name
 
             def register_client() -> None:
-                access_token = AppDataStore().app_data.user_auth.access_token
+                access_token = st.session_state.app_data_store.app_data.user_auth.access_token
                 if not access_token:
                     set_oauth_notice("error", "Login expired; sign in again before registering.")
                     return
@@ -338,7 +340,7 @@ def render_connection_setup() -> None:
                     set_oauth_notice("error", "Registration response missing client_id.")
                     return
 
-                AppDataStore().update(
+                st.session_state.app_data_store.update(
                     oauth_client_id=client_id,
                     registration_access_token=client_data.get("registration_access_token"),
                     registration_client_uri=client_data.get("registration_client_uri"),
@@ -480,21 +482,16 @@ def init() -> None:
 
     st.set_page_config(page_title="MCP OAuth 2.1 PKCE and DCR", page_icon="🤖")
     st.title("MCP OAuth 2.1 PKCE and DCR")
+    cookies = StreamlitCookieController()
 
-    # user_key = ensure_user_identifier()
+    while len(cookies.getAll()) == 0:
+        time.sleep(1)
 
-    # global CURRENT_USER_KEY
-    # CURRENT_USER_KEY = user_key
-
-    app_data: AppData = AppDataStore(app_url=APP_URL, streamlit=st).app_data
-    # if app_data is None:
-    #     app_data =
-
-    #
-    # CURRENT_APP_DATA = app_data
+    app_data_store: AppDataStore = AppDataStore(cookies=cookies)
+    st.session_state.app_data_store = app_data_store
 
     headers: Dict[str, str] = {}
-    app_state = app_data.app_auth
+    app_state = app_data_store.app_data.app_auth
     token = app_state.access_token or ""
     mcp_server: Optional[MCPServerStreamableHTTP] = None
     if token:
@@ -521,7 +518,7 @@ def init() -> None:
 
 def render_sidebar() -> None:
     """Display sidebar controls and quick info."""
-    app_data = AppDataStore().app_data
+    app_data = st.session_state.app_data_store.app_data
     with st.sidebar:
         st.subheader("Session")
         # st.caption("Prototype uses hard-coded model & API key. Later steps move these to env vars.")
