@@ -260,7 +260,7 @@ def render_connection_setup() -> None:
     client_authorized = app_state.is_authorized
 
     with st.expander("Authentication and Authorization", expanded=True):
-        st.markdown("#### 1. Sign In")
+        st.markdown("##### 1. Sign In")
         st.text("Uses an OAuth 2.0 authorization code flow to authenticate the user.")
         if not user_authenticated:
             authorize_url = oauth_flow.start_authorization_flow(
@@ -278,7 +278,7 @@ def render_connection_setup() -> None:
             st.success("Signed in successfully.")
             st.button("Sign Out", on_click=reset_login_tokens, use_container_width=True)
 
-        st.markdown("#### 2. Dynamic Client Registration")
+        st.markdown("##### 2. Dynamic Client Registration")
         st.text("Dynamically register a new client application if one doesn't exist.")
         if not user_authenticated:
             st.info("Sign in first to enable dynamic client registration.")
@@ -354,7 +354,7 @@ def render_connection_setup() -> None:
 
             st.button("Register OAuth client", on_click=register_client, use_container_width=True)
 
-        st.markdown("#### 3. Authorize Registered Application")
+        st.markdown("##### 3. Authorize Registered Application")
         st.text("Uses an OAuth 2.0 authorization code with the dynamically registered application.")
         if not client_registered:
             st.info("Register the client before requesting authorization.")
