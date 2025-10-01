@@ -47,7 +47,8 @@ FORCE_RERUN_KEY = "_force_rerun"
 # OAUTHhttps://mybooks.ngrok.app
 OAUTH_SERVER_URL = os.environ["OAUTH_SERVER_URL"]
 REDIRECT_URI = APP_URL
-OAUTH_SCOPE = "read write openid profile email"
+AUTH_OAUTH_SCOPE = "read write openid profile email"
+APP_OAUTH_SCOPE = "read write"
 OAUTH_USER_AUTH_CLIENT_ID = os.environ.get("OAUTH_USER_AUTH_CLIENT_ID")
 
 try:
@@ -263,7 +264,7 @@ def render_connection_setup() -> None:
             authorize_url = oauth_flow.start_authorization_flow(
                 name=oauth_flow.FLOW_USER_LOGIN,
                 client_id=OAUTH_USER_AUTH_CLIENT_ID,
-                scope=OAUTH_SCOPE,
+                scope=AUTH_OAUTH_SCOPE,
                 redirect_uri=REDIRECT_URI,
                 authorization_endpoint=OAUTH_METADATA.authorization_endpoint,
                 reuse_existing=True,
@@ -310,7 +311,7 @@ def render_connection_setup() -> None:
                         access_token=access_token,
                         client_name=client_name,
                         redirect_uri=REDIRECT_URI,
-                        scope=OAUTH_SCOPE,
+                        scope=APP_OAUTH_SCOPE,
                     )
                 except requests.HTTPError as exc:
                     response = exc.response
@@ -366,7 +367,7 @@ def render_connection_setup() -> None:
             authorize_url = oauth_flow.start_authorization_flow(
                 name=oauth_flow.FLOW_APP_AUTHORIZE,
                 client_id=app_state.client_id,
-                scope=OAUTH_SCOPE,
+                scope=APP_OAUTH_SCOPE,
                 redirect_uri=REDIRECT_URI,
                 authorization_endpoint=OAUTH_METADATA.authorization_endpoint,
                 reuse_existing=True,
@@ -578,11 +579,11 @@ def render_sidebar() -> None:
         app_state = app_data.app_auth
         st.write(
             {
-            "user_access_token": user_state.access_token if user_state.access_token else None,
-            "user_refresh_token": user_state.refresh_token if user_state.refresh_token else None,
-            "app_client_id": app_state.client_id or None,
-            "app_access_token": app_state.access_token if app_state.access_token else None,
-            "app_refresh_token": app_state.refresh_token if app_state.refresh_token else None,
+                "user_access_token": user_state.access_token if user_state.access_token else None,
+                "user_refresh_token": user_state.refresh_token if user_state.refresh_token else None,
+                "app_client_id": app_state.client_id or None,
+                "app_access_token": app_state.access_token if app_state.access_token else None,
+                "app_refresh_token": app_state.refresh_token if app_state.refresh_token else None,
             }
         )
 

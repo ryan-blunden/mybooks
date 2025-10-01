@@ -409,8 +409,7 @@ OAUTH2_PROVIDER = {
     "ALLOWED_SCHEMES": ["http", "https"] if DEBUG else ["https"],
     "OIDC_ENABLED": os.environ.get("OAUTH_OIDC_RSA_PRIVATE_KEY") is not None,
     "OIDC_RSA_PRIVATE_KEY": os.environ.get("OAUTH_OIDC_RSA_PRIVATE_KEY"),
-    # "OAUTH2_VALIDATOR_CLASS": "mybooks.oauth_validators.CustomOAuth2Validator",
-    # "SCOPES": {"read": "Read scope", "write": "Write scope"},
+    "OAUTH2_VALIDATOR_CLASS": "mybooks.oauth_validators.CustomOAuth2Validator",
     "SCOPES": {
         "read": "Read access",
         "write": "Write access",
@@ -419,8 +418,8 @@ OAUTH2_PROVIDER = {
         "email": "Email address",
     },
     # Allow PKCE without client authentication
-    "PKCE_REQUIRED": False,
-    "ALLOW_UNSAFE_CONFIDENTIAL_PKCE": True,
+    "PKCE_REQUIRED": True,
+    "ALLOW_UNSAFE_CONFIDENTIAL_PKCE": False,
 }
 
 OAUTH_DCR_SETTINGS = {
@@ -468,19 +467,4 @@ SPECTACULAR_SETTINGS = {
     "OAUTH2_AUTHORIZATION_URL": f"{SITE_URL}/oauth/authorize/",
     "OAUTH2_TOKEN_URL": f"{SITE_URL}/oauth/token/",
     "OAUTH2_REFRESH_URL": f"{SITE_URL}/oauth/token/",
-    # "OAUTH2_SCOPES": {
-    #     "read": "Read scope",
-    #     "write": "Write scope",
-    # },
-    # "SECURITY": [{"oauth2": []}, {"tokenAuth": []}],
 }
-
-
-################
-# App Settings #
-################
-
-# OATH_CLIENT_ID = os.getenv("OAUTH_CLIENT_ID")
-# OATH_CLIENT_SECRET = os.getenv("OAUTH_CLIENT_SECRET")
-# OAUTH_GET_CODE_VERIFIER = os.getenv("OAUTH_GET_CODE_VERIFIER")
-# CODE_CHALLENGE=PpTct8akOBdXfM0Wr1zKKwni-iaYpP2fT7z-m-Vnqf8

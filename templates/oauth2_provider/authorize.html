@@ -6,18 +6,15 @@
 {% block body_classes %}bg-slate-950 text-slate-100{% endblock %}
 
 {% block body %}
-    <div class="min-h-screen flex items-center justify-center py-16 px-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div class="min-h-screen flex items-center justify-center py-8 px-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
         <div class="w-full max-w-4xl">
             {% if not error %}
                 <div class="rounded-3xl border border-slate-700/70 bg-slate-900/70 shadow-xl backdrop-blur">
-                    <form id="authorizationForm" method="post" class="p-8 sm:p-12 space-y-10">
+                    <form id="authorizationForm" method="post" class="p-8 space-y-10">
                         <div class="space-y-4">
                             <h1 class="text-3xl font-semibold text-white sm:text-4xl">
                                 {% blocktrans with app_name=application.name %}{{ app_name }} is requesting access{% endblocktrans %}
                             </h1>
-                            <p class="text-base text-slate-300">
-                                {% trans "Review the details below. Approving will redirect you back to the requesting application." %}
-                            </p>
                         </div>
 
                         {% csrf_token %}
