@@ -3,21 +3,17 @@
 {% load i18n %}
 
 {% block title %}{% trans "Authorize Application" %}{% endblock %}
-{% block body_classes %}bg-slate-950 text-slate-100{% endblock %}
 
 {% block body %}
-    <div class="min-h-screen flex items-center justify-center py-16 px-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+    <div class="min-h-screen flex items-center justify-center py-8 px-4 bg-gray-50 dark:bg-gray-900">
         <div class="w-full max-w-4xl">
             {% if not error %}
-                <div class="rounded-3xl border border-slate-700/70 bg-slate-900/70 shadow-xl backdrop-blur">
-                    <form id="authorizationForm" method="post" class="p-8 sm:p-12 space-y-10">
+                <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                    <form id="authorizationForm" method="post" class="p-8 space-y-10">
                         <div class="space-y-4">
-                            <h1 class="text-3xl font-semibold text-white sm:text-4xl">
+                            <h1 class="text-3xl font-semibold text-gray-900 dark:text-white sm:text-4xl">
                                 {% blocktrans with app_name=application.name %}{{ app_name }} is requesting access{% endblocktrans %}
                             </h1>
-                            <p class="text-base text-slate-300">
-                                {% trans "Review the details below. Approving will redirect you back to the requesting application." %}
-                            </p>
                         </div>
 
                         {% csrf_token %}
@@ -27,47 +23,47 @@
                             {% endif %}
                         {% endfor %}
 
-                        <div class="grid gap-6 sm:grid-cols-2 text-sm text-slate-200">
-                            <div class="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 sm:col-span-2">
-                                <p class="text-xs uppercase tracking-wider text-slate-400">{% trans "Name" %}</p>
-                                <p class="mt-2 text-lg font-medium text-white break-words">{{ application.name }}</p>
+                        <div class="grid gap-6 sm:grid-cols-2 text-sm text-gray-700 dark:text-gray-300">
+                            <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-6 sm:col-span-2">
+                                <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-white">{% trans "Name" %}</p>
+                                <p class="mt-2 text-lg font-medium text-gray-900 dark:text-white break-words">{{ application.name }}</p>
                             </div>
-                            <div class="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 sm:col-span-2">
-                                <p class="text-xs uppercase tracking-wider text-slate-400">{% trans "Redirect URIs" %}</p>
-                                <div class="mt-2 text-base text-slate-200/90">
+                            <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-6 sm:col-span-2">
+                                <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-white">{% trans "Redirect URIs" %}</p>
+                                <div class="mt-2 text-base text-gray-700 dark:text-gray-300">
                                     {{ application.redirect_uris|default:_("No redirect URIs configured") }}
                                 </div>
                             </div>
-                            <div class="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-6 sm:col-span-2">
-                                <p class="text-xs uppercase tracking-wider text-slate-400">{% trans "Client ID" %}</p>
-                                <p class="mt-2 font-mono text-base text-indigo-300">{{ application.client_id }}</p>
+                            <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-6 sm:col-span-2">
+                                <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-white">{% trans "Client ID" %}</p>
+                                <p class="mt-2 font-mono text-base text-gray-700 dark:text-gray-300">{{ application.client_id }}</p>
                             </div>
                         </div>
 
                         <div class="space-y-4">
-                            <h2 class="text-xl font-semibold text-white">{% trans "Permissions" %}</h2>
+                            <h2 class="text-xl font-semibold text-gray-900 dark:text-white">{% trans "Permissions" %}</h2>
                             {% if scopes_descriptions %}
-                                <div class="space-y-3">
+                                <div class="space-y-2">
                                     {% for scope in scopes_descriptions %}
-                                        <div class="flex items-start gap-3 rounded-2xl border border-indigo-500/40 bg-indigo-500/10 px-4 py-3">
-                                            <span class="mt-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/20">
-                                                <svg class="h-4 w-4 text-emerald-300" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                        <div class="flex items-center gap-3 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-4 py-3">
+                                            <span class="inline-flex h-5 w-5 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30 flex-shrink-0">
+                                                <svg class="h-3.5 w-3.5 text-green-600 dark:text-green-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                                     <path fill-rule="evenodd" d="M16.704 5.29a1 1 0 0 1 .006 1.414l-7.001 7a1 1 0 0 1-1.414 0l-3.001-3a1 1 0 0 1 1.414-1.414l2.294 2.293 6.294-6.293a1 1 0 0 1 1.408 0Z" clip-rule="evenodd" />
                                                 </svg>
                                             </span>
-                                            <p class="text-sm text-slate-100">{{ scope }}</p>
+                                            <p class="text-sm text-gray-900 dark:text-white">{{ scope }}</p>
                                         </div>
                                     {% endfor %}
                                 </div>
                             {% else %}
-                                <p class="text-sm text-slate-300">
+                                <p class="text-sm text-gray-600 dark:text-gray-400">
                                     {% trans "This application is not requesting any additional permissions." %}
                                 </p>
                             {% endif %}
                         </div>
 
                         {% if form.errors or form.non_field_errors %}
-                            <div class="rounded-2xl border border-red-500/60 bg-red-500/10 p-4 text-sm text-red-300">
+                            <div class="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-gray-800 p-4 text-sm text-red-800 dark:text-red-400">
                                 {{ form.errors }}
                                 {{ form.non_field_errors }}
                             </div>
@@ -76,27 +72,27 @@
                         <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
                             <input
                                 type="submit"
-                                class="w-full sm:w-auto inline-flex justify-center rounded-xl border border-slate-700/70 bg-transparent px-6 py-2.5 text-sm font-medium text-slate-200 transition hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/80"
+                                class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-800 hover:cursor-pointer"
                                 value="{% trans 'Cancel' %}"
                             />
                             <input
                                 type="submit"
                                 name="allow"
-                                class="w-full sm:w-auto inline-flex justify-center rounded-xl bg-indigo-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:bg-indigo-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 hover:cursor-pointer"
+                                class="w-full sm:w-auto inline-flex justify-center rounded-lg bg-primary-700 dark:bg-primary-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-primary-800 dark:hover:bg-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:focus:ring-primary-800 hover:cursor-pointer"
                                 value="{% trans 'Authorize' %}"
                             />
                         </div>
                     </form>
                 </div>
             {% else %}
-                <div class="rounded-3xl border border-red-500/60 bg-red-900/40 shadow-xl backdrop-blur p-10">
-                    <h1 class="text-2xl font-semibold text-red-200 mb-2">
+                <div class="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-gray-800 shadow-sm p-10">
+                    <h1 class="text-2xl font-semibold text-red-800 dark:text-red-400 mb-2">
                         {% trans "Authorization Error" %}
                     </h1>
-                    <p class="text-sm text-red-100">
+                    <p class="text-sm text-red-800 dark:text-red-400">
                         <span class="font-medium">{% trans "Error" %}:</span> {{ error.error }}
                     </p>
-                    <p class="mt-2 text-sm text-red-100/80">{{ error.description }}</p>
+                    <p class="mt-2 text-sm text-red-700 dark:text-red-400">{{ error.description }}</p>
                 </div>
             {% endif %}
         </div>

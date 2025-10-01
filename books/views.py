@@ -1,4 +1,3 @@
-from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from oauth2_provider.contrib.rest_framework import IsAuthenticatedOrTokenHasScope
@@ -158,7 +157,7 @@ class AuthorViewSet(viewsets.ModelViewSet):
     list=extend_schema(
         operation_id="list_user_personal_book_collection",
         summary="List authenticated user's personal book collection",
-        description="Retrieve all books in the authenticated user's personal collection with reading status tracking and date information. This endpoint returns only books that the authenticated user has explicitly added to their personal library, along with their reading status (want_to_read, reading, finished, dropped), dates when books were added/started/finished, and associated book details. Use this tool when you need to see what books a user has in their collection, check reading progress, or manage their personal library. The response includes book metadata (title, author, genre) combined with user-specific data (reading status, dates). This is different from browsing all available books - this shows only books the user has chosen to track. Results are paginated and sorted by date_added (most recent first). Requires user authentication.",
+        description="Retrieve all books in the authenticated user's personal collection with reading status tracking. This endpoint returns only books that the authenticated user has explicitly added to their personal library, along with their reading status (want_to_read, reading, finished, dropped), when the book was added, and associated book details. Use this tool when you need to see what books a user has in their collection, check reading progress, or manage their personal library. The response includes book metadata (title, author, genre) combined with user-specific data (reading status, date added). This is different from browsing all available books - this shows only books the user has chosen to track. Results are paginated and sorted by date_added (most recent first). Requires user authentication.",
         parameters=[
             OpenApiParameter(
                 name="search",
@@ -168,21 +167,10 @@ class AuthorViewSet(viewsets.ModelViewSet):
             ),
             OpenApiParameter(
                 name="ordering",
-                description="Sort the collection by specified field. Available options: 'date_added' (newest first), 'book__title' (alphabetical), 'reading_status', 'date_started', 'date_finished', or negative versions for reverse order. Default is newest added first (-date_added).",
+                description="Sort the collection by specified field. Available options: 'date_added' (newest first), 'book__title' (alphabetical), 'reading_status', or negative versions for reverse order. Default is newest added first (-date_added).",
                 required=False,
                 type=str,
-                enum=[
-                    "date_added",
-                    "-date_added",
-                    "book__title",
-                    "-book__title",
-                    "reading_status",
-                    "-reading_status",
-                    "date_started",
-                    "-date_started",
-                    "date_finished",
-                    "-date_finished",
-                ],
+                enum=["date_added", "-date_added", "book__title", "-book__title", "reading_status", "-reading_status"],
             ),
         ],
         tags=["user-books"],
@@ -203,20 +191,20 @@ class AuthorViewSet(viewsets.ModelViewSet):
     retrieve=extend_schema(
         operation_id="get_book_from_user_collection",
         summary="Get detailed information about a book in user's collection",
-        description="Retrieve comprehensive information about a specific book in the authenticated user's personal collection using the userbook_id (not the book_id). This endpoint returns the user's relationship to the book including current reading status, dates when the book was added/started/finished, combined with complete book details (title, author, description, genre) and any review the user has written for this book. Use this tool when you need detailed information about how a specific user relates to a specific book in their collection. The userbook_id is the unique identifier for the user-book relationship, which you can get from the list endpoint. This is different from the general book browsing endpoint - this shows user-specific tracking information. Returns 404 if the userbook_id doesn't exist or doesn't belong to the authenticated user. Requires user authentication.",
+        description="Retrieve comprehensive information about a specific book in the authenticated user's personal collection using the userbook_id (not the book_id). This endpoint returns the user's relationship to the book including current reading status, when the book was added, complete book details (title, author, description, genre), and any review the user has written for this book. Use this tool when you need detailed information about how a specific user relates to a specific book in their collection. The userbook_id is the unique identifier for the user-book relationship, which you can get from the list endpoint. This is different from the general book browsing endpoint - this shows user-specific tracking information. Returns 404 if the userbook_id doesn't exist or doesn't belong to the authenticated user. Requires user authentication.",
         tags=["user-books"],
         responses={
-            200: OpenApiResponse(description="Complete book details with user's reading status, dates, and review if available"),
+            200: OpenApiResponse(description="Complete book details with user's reading status, date added, and review if available"),
             404: OpenApiResponse(description="UserBook relationship not found in authenticated user's collection"),
         },
     ),
     update=extend_schema(
         operation_id="update_book_reading_status_in_collection",
         summary="Update reading status and tracking for book in user's collection",
-        description="Update the reading status and tracking information for a book in the authenticated user's collection using the userbook_id. This endpoint allows changing the reading_status (want_to_read, reading, finished, dropped) and automatically manages related date fields based on status transitions. When status changes to 'reading', date_started is set to current time. When status changes to 'finished', date_finished is set to current time. Use this tool when a user progresses through reading a book or changes their intent for a book in their collection. The userbook_id identifies the specific user-book relationship to update. You cannot change which book this relationship points to - only the user's interaction with that book. The system validates status transitions and ensures dates remain consistent. Requires the complete object data (PUT method). PATCH method is not supported due to technical issues - use PUT for all updates. Requires user authentication and ownership of the userbook relationship.",
+        description="Update the reading status information for a book in the authenticated user's collection using the userbook_id. This endpoint allows changing the reading_status (want_to_read, reading, finished, dropped) for the user's relationship to the book. Use this tool when a user progresses through reading a book or changes their intent for a book in their collection. The userbook_id identifies the specific user-book relationship to update. You cannot change which book this relationship points to - only the user's interaction with that book. Requires the complete object data (PUT method). PATCH method is not supported due to technical issues - use PUT for all updates. Requires user authentication and ownership of the userbook relationship.",
         tags=["user-books"],
         responses={
-            200: OpenApiResponse(description="Book reading status successfully updated with automatic date management"),
+            200: OpenApiResponse(description="Book reading status successfully updated"),
             400: OpenApiResponse(description="Validation error or invalid status transition"),
             404: OpenApiResponse(description="UserBook relationship not found in authenticated user's collection"),
         },
@@ -224,10 +212,10 @@ class AuthorViewSet(viewsets.ModelViewSet):
     destroy=extend_schema(
         operation_id="remove_book_from_user_collection",
         summary="Remove book from user's personal collection",
-        description="Remove a book from the authenticated user's personal collection using the userbook_id. This operation deletes the user-book relationship and all associated tracking data (reading status, dates) but does NOT delete the book itself from the system - other users can still have this book in their collections and the book remains available for browsing and future additions. Use this tool when a user wants to completely remove a book from their personal library and stop tracking it. This action also removes any review the user has written for this book, as reviews are tied to the user-book relationship. The userbook_id identifies the specific relationship to delete. This is irreversible - if the user wants the book back in their collection, they'll need to add it again with a fresh tracking relationship. Requires user authentication and ownership of the userbook relationship.",
+        description="Remove a book from the authenticated user's personal collection using the userbook_id. This operation deletes the user-book relationship and associated reading status but does NOT delete the book itself from the system - other users can still have this book in their collections and the book remains available for browsing and future additions. Use this tool when a user wants to completely remove a book from their personal library and stop tracking it. This action also removes any review the user has written for this book, as reviews are tied to the user-book relationship. The userbook_id identifies the specific relationship to delete. This is irreversible - if the user wants the book back in their collection, they'll need to add it again with a fresh tracking relationship. Requires user authentication and ownership of the userbook relationship.",
         tags=["user-books"],
         responses={
-            204: OpenApiResponse(description="Book and all tracking data successfully removed from user's collection"),
+            204: OpenApiResponse(description="Book and tracking relationship successfully removed from user's collection"),
             404: OpenApiResponse(description="UserBook relationship not found in authenticated user's collection"),
         },
     ),
@@ -237,7 +225,7 @@ class UserBookViewSet(viewsets.ModelViewSet):
     ViewSet for managing books in the user's personal collection.
 
     Provides full CRUD operations for books in the authenticated user's library,
-    including reading status tracking and automatic date management.
+    including reading status tracking.
 
     Note: PATCH is disabled due to hanging issues with the development server.
     Use PUT for updates instead.
@@ -249,7 +237,7 @@ class UserBookViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ["reading_status"]
     search_fields = ["book__title", "book__author__name", "reading_status"]
-    ordering_fields = ["date_added", "date_started", "date_finished", "book__title", "reading_status"]
+    ordering_fields = ["date_added", "book__title", "reading_status"]
     ordering = ["-date_added"]
     http_method_names = ["get", "post", "put", "delete", "head", "options"]  # Exclude 'patch'
 
@@ -265,28 +253,6 @@ class UserBookViewSet(viewsets.ModelViewSet):
         if self.action == "retrieve":
             return UserBookDetailSerializer
         return UserBookSerializer
-
-    def update(self, request, *args, **kwargs):
-        """
-        Update reading status and manage date_started/date_finished automatically.
-        """
-        partial = kwargs.pop("partial", False)
-        instance = self.get_object()
-        old_status = instance.reading_status
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        new_status = serializer.validated_data.get("reading_status", old_status)
-
-        # Set date_started if status changes to 'reading'
-        if old_status != "reading" and new_status == "reading":
-            serializer.validated_data["date_started"] = timezone.now()
-
-        # Set date_finished if status changes to 'finished' or 'dropped'
-        if old_status not in ("finished", "dropped") and new_status in ("finished", "dropped"):
-            serializer.validated_data["date_finished"] = timezone.now()
-
-        self.perform_update(serializer)
-        return Response(serializer.data)
 
 
 @extend_schema_view(

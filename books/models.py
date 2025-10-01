@@ -98,8 +98,6 @@ class UserBook(models.Model):
     book = models.ForeignKey(Book, on_delete=models.CASCADE, related_name="user_books")
     reading_status = models.CharField(max_length=20, choices=READING_STATUS_CHOICES, default="want_to_read")
     date_added = models.DateTimeField(auto_now_add=True)
-    date_started = models.DateTimeField(blank=True, null=True)
-    date_finished = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         ordering = ["-date_added"]

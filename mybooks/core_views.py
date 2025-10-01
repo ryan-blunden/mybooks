@@ -19,7 +19,7 @@ def signin(request: HttpRequest) -> HttpResponse:
         return redirect(request.POST.get("next") or request.GET.get("next") or "oauth-apps")
 
     if request.method == "POST":
-        username = request.POST.get("username")
+        username = request.POST.get("username").strip()
         password = request.POST.get("password")
         next_url = request.POST.get("next") or request.GET.get("next") or "oauth-apps"
 
