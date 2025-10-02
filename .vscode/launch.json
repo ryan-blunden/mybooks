@@ -2,26 +2,27 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Django HTTP",
+      "name": "Django",
       "type": "debugpy",
       "request": "launch",
       "module": "django",
       "args": ["runserver", "[::]:8080"],
       "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
       "django": true,
       "justMyCode": false,
       "env": {
-        "PYTHONPATH": "${workspaceFolder}",
         "DOPPLER_ENV": "1"
       }
     },
     {
-      "name": "HTTP Plus Server",
+      "name": "Django HTTP Plus",
       "type": "debugpy",
       "request": "launch",
       "program": "manage.py",
       "args": ["runserver_plus", "[::]:8080"],
       "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
       "django": true,
       "justMyCode": false,
       "env": {
@@ -35,6 +36,7 @@
       "program": "manage.py",
       "args": ["${command:pickArgs}"],
       "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
       "django": true,
       "justMyCode": false,
       "env": {
@@ -42,17 +44,18 @@
       }
     },
     {
-      "name": "Streamlit",
+      "name": "Agent",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/.venv/bin/streamlit",
       "args": ["run", "agent/agent.py", "--server.port", "9090", "--logger.level", "info", "--server.headless", "true"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/agent/.env",
       "justMyCode": false,
       "env": {
         "DOPPLER_ENV": "1",
-        "DOPPLER_CONFIG": "dev_agent",
+        "DOPPLER_CONFIG": "agent",
         "PYTHONPATH": "."
       }
     },

@@ -273,7 +273,6 @@ def clear_all_flows() -> None:
 def register_dynamic_client(
     *,
     registration_endpoint: str,
-    access_token: str,
     client_name: str,
     redirect_uri: str,
     scope: str,
@@ -291,7 +290,6 @@ def register_dynamic_client(
         payload["contacts"] = contacts
 
     headers = {
-        "Authorization": f"Bearer {access_token}",
         "Content-Type": "application/json",
     }
 

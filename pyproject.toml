@@ -56,6 +56,7 @@ dev = [
   "django-types",
   "honcho>=2.0.0",
   "httpie>=3.2.4",
+  "djhtml>=3.0.9",
 ]
 
 [tool.setuptools]

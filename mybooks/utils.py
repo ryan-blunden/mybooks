@@ -40,7 +40,7 @@ def get_oauth_server_metadata() -> dict:
         "issuer": base_url,
         "authorization_endpoint": f"{base_url}{reverse('oauth2_provider:authorize')}",
         "token_endpoint": f"{base_url}{reverse('oauth2_provider:token')}",
-        "registration_endpoint": f"{base_url}{reverse('oauth2_dcr')}",
+        "registration_endpoint": f"{base_url}{reverse('oauth-register')}",
         "introspection_endpoint": f"{base_url}{reverse('oauth2_provider:introspect')}",
         "revocation_endpoint": f"{base_url}{reverse('oauth2_provider:revoke-token')}",
     }

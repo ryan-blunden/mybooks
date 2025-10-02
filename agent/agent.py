@@ -3,7 +3,6 @@ import html
 import json
 import os
 import time
-import uuid
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
@@ -188,13 +187,13 @@ def process_oauth_callback() -> None:
             user_access_token=access_token,
             user_refresh_token=refresh_token,
         )
-        set_oauth_notice("success", "Signed in successfully. You can now register a client application.")
+        set_oauth_notice("success", "Signed in successfully.")
     elif pending_flow == oauth_flow.FLOW_APP_AUTHORIZE:
         st.session_state.app_data_store.update(
             oauth_access_token=access_token,
             oauth_refresh_token=refresh_token,
         )
-        set_oauth_notice("success", "Agent application authorized and tokens cached.")
+        set_oauth_notice("success", "Agent application authorized successfully.")
     else:
         set_oauth_notice("warning", "OAuth callback handled but flow type was unrecognized.")
 
@@ -260,8 +259,10 @@ def render_connection_setup() -> None:
     client_authorized = app_state.is_authorized
 
     with st.expander("Authentication and Authorization", expanded=True):
-        st.markdown("##### 1. Sign In")
-        st.text("Uses an OAuth 2.0 authorization code flow to authenticate the user.")
+        st.markdown("##### Sign In")
+        st.text(
+            "Optionally authenticate with OAuth with pre-registered application instead of standard session login.\nFor simulating DCR when register endpoint requires authentication"
+        )
         if not user_authenticated:
             authorize_url = oauth_flow.start_authorization_flow(
                 name=oauth_flow.FLOW_USER_LOGIN,
@@ -275,19 +276,21 @@ def render_connection_setup() -> None:
                 print("Authorization URL:", authorize_url)
                 trigger_browser_redirect(authorize_url)
         else:
-            st.success("Signed in successfully.")
+            st.success("Authenticated with OAuth.")
             st.button("Sign Out", on_click=reset_login_tokens, use_container_width=True)
 
-        st.markdown("##### 2. Dynamic Client Registration")
-        st.text("Dynamically register a new client application if one doesn't exist.")
-        if not user_authenticated:
-            st.info("Sign in first to enable dynamic client registration.")
-        elif client_registered:
+        st.markdown("##### Dynamic Client Registration")
+        st.text("Register a new application (authentication not required).")
+        # if not app_state.client_id:
+        #     st.text("Register a new client application.")
+        # if not user_authenticated:
+        #     st.info("Sign in first to enable dynamic client registration.")
+        if client_registered:
             st.success(f"Client ID: {app_state.client_id}.")
         else:
             client_name = st.session_state.get("pending_client_name")
             if not isinstance(client_name, str):
-                client_name = f"MyBooks Agent {uuid.uuid4().hex[:6]}"
+                client_name = f"MyBooks Agent"
                 st.session_state.pending_client_name = client_name
                 st.session_state["pending_client_name_input"] = client_name
 
@@ -295,22 +298,21 @@ def render_connection_setup() -> None:
             if input_key not in st.session_state:
                 st.session_state[input_key] = client_name
 
-            name_input = st.text_input("Client name", key=input_key)
+            name_input = st.text_input("Client Name", key=input_key)
             cleaned_name = name_input.strip()
             effective_name = cleaned_name or client_name
             st.session_state.pending_client_name = effective_name
             client_name = effective_name
 
             def register_client() -> None:
-                access_token = st.session_state.app_data_store.app_data.user_auth.access_token
-                if not access_token:
-                    set_oauth_notice("error", "Login expired; sign in again before registering.")
-                    return
+                # access_token = st.session_state.app_data_store.app_data.user_auth.access_token
+                # if not access_token:
+                #     set_oauth_notice("error", "Login expired; sign in again before registering.")
+                #     return
 
                 try:
                     client_data = oauth_flow.register_dynamic_client(
                         registration_endpoint=registration_endpoint,
-                        access_token=access_token,
                         client_name=client_name,
                         redirect_uri=REDIRECT_URI,
                         scope=APP_OAUTH_SCOPE,
@@ -352,14 +354,14 @@ def render_connection_setup() -> None:
                 set_oauth_notice("success", "Client registered successfully.")
                 schedule_rerun()
 
-            st.button("Register OAuth client", on_click=register_client, use_container_width=True)
+            st.button("Register", on_click=register_client, use_container_width=True)
 
-        st.markdown("##### 3. Authorize Registered Application")
-        st.text("Uses an OAuth 2.0 authorization code with the dynamically registered application.")
+        st.markdown("##### Authorize Registered Application")
+        st.text("Use authorization code flow with PKCE to authorize application.")
         if not client_registered:
-            st.info("Register the client before requesting authorization.")
+            st.info("Waiting for application to be registered...")
         elif client_authorized:
-            st.success("Client authorized successfully.")
+            st.success("Application authorized and tokens cached.")
             st.button(
                 "Reset authorization tokens",
                 on_click=reset_agent_authorization,
@@ -374,7 +376,7 @@ def render_connection_setup() -> None:
                 authorization_endpoint=OAUTH_METADATA.authorization_endpoint,
                 reuse_existing=True,
             )
-            if st.button("Authorize registered client", use_container_width=True):
+            if st.button("Authorize", use_container_width=True):
                 trigger_browser_redirect(authorize_url)
 
 
@@ -480,8 +482,9 @@ def flatten_exceptions(exc: BaseException) -> List[BaseException]:
 def init() -> None:
     """Bootstrap Streamlit session state for chat + agent."""
 
-    st.set_page_config(page_title="MCP OAuth 2.1 PKCE and DCR", page_icon="🤖")
-    st.title("MCP OAuth 2.1 PKCE and DCR")
+    st.set_page_config(page_title="MCP OAuth 2.1 with PKCE and DCR")
+    st.title("MCP OAuth 2.1 with PKCE and DCR")
+    st.text("MCP auth spec compliant demo with Authorization Code Flow, PKCE and Dynamic Client Registration.")
     cookies = StreamlitCookieController()
 
     while len(cookies.getAll()) == 0:

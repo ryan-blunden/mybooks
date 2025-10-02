@@ -9,11 +9,8 @@ from django.contrib.auth.decorators import login_required
 from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
-from django.utils.decorators import method_decorator
-from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
-from oauth2_provider.models import AccessToken, Application
-from oauth_dcr.views import DynamicClientRegistrationView
+from oauth2_provider.models import Application
 
 from mybooks.utils import build_code_challenge, get_code_verifier, get_oauth_server_metadata
 
@@ -21,46 +18,6 @@ from mybooks.utils import build_code_challenge, get_code_verifier, get_oauth_ser
 def oauth_metadata(request):
     """Provide OAuth2 provider metadata."""
     return JsonResponse(get_oauth_server_metadata())
-
-
-@method_decorator(csrf_exempt, name="dispatch")
-class UserOwnedDynamicClientRegistrationView(DynamicClientRegistrationView):
-    """Login-gated DCR endpoint that associates new apps with the requesting user."""
-
-    # AIDEV-NOTE: DCR apps must retain a reference to the owner; do not remove user assignment.
-    def dispatch(self, request, *args, **kwargs):
-        authenticated_user = self._resolve_authenticated_user(request)
-        if authenticated_user is None:
-            return JsonResponse({"detail": "Authentication required for dynamic client registration."}, status=403)
-
-        request.user = authenticated_user
-        setattr(request, "_cached_user", authenticated_user)
-        return super().dispatch(request, *args, **kwargs)
-
-    def _resolve_authenticated_user(self, request):
-        user = request.user if request.user.is_authenticated else None
-        if user is not None:
-            return user
-
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.lower().startswith("bearer "):
-            parts = auth_header.split(None, 1)
-            token_value = parts[1].strip() if len(parts) == 2 else ""
-            if token_value:
-                try:
-                    oauth_token = AccessToken.objects.select_related("user").get(token=token_value)
-                except AccessToken.DoesNotExist:
-                    return None
-                if not oauth_token.is_expired():
-                    return oauth_token.user
-        return None
-
-    def _create_application(self, metadata):
-        """Persist the application with the authenticated owner."""
-        application = super()._create_application(metadata)
-        application.user = self.request.user
-        application.save(update_fields=["user"])
-        return application
 
 
 @login_required
@@ -75,15 +32,23 @@ def apps(request):
         request.session["oauth_code_verifier"] = code_verifier
         request.session["oauth_code_challenge"] = code_challenge
 
-    applications = Application.objects.filter(user=request.user).order_by("-created")
+    register_response = request.session.get("register_response", None)
+    if register_response:
+        application = Application.objects.get(client_id=register_response.get("client_id"))
+        application.user = request.user
+        application.save()
+
+        register_response = json.dumps(register_response, indent=4)
+        request.session.pop("register_response", None)
 
     tokens = request.session.get("oauth_tokens")
     if tokens is not None:
+        tokens = json.dumps(tokens, indent=4)
         request.session.pop("oauth_tokens", None)
 
     # Pre-fill registration data for new application
     registration_data = {
-        "client_name": f"OAuth App {uuid.uuid4().hex[:4]}",
+        "client_name": f"My Books Agent",
         "redirect_uris": [request.build_absolute_uri(reverse("oauth-apps"))],
         "grant_types": ["authorization_code", "refresh_token"],
         "response_types": ["code"],
@@ -93,9 +58,12 @@ def apps(request):
         "token_endpoint_auth_method": "none",
     }
 
+    applications = Application.objects.filter(user=request.user).order_by("-created")
     context = {
         "registration_data": registration_data,
-        "oauth_metadata_url": request.build_absolute_uri(reverse("oauth-metadata")),
+        "register_response": register_response,
+        "oauth_metadata_url": request.build_absolute_uri(reverse("oauth-discovery-info")),
+        "oauth_oidc_metadata_url": request.build_absolute_uri(reverse("oauth2_provider:oidc-connect-discovery-info")),
         "oauth_state": request.session.get("oauth_state"),
         "applications": applications,
         "code_challenge": code_challenge,
@@ -109,7 +77,7 @@ def apps(request):
 @login_required
 @require_POST
 def register(request):
-    dcr_url = request.build_absolute_uri(reverse("oauth2_dcr"))
+    dcr_url = request.build_absolute_uri(reverse("oauth-register"))
     client_name = request.POST.get("client_name", "").strip()
     redirect_uris = [uri.strip() for uri in request.POST.get("redirect_uris", "").split(",") if uri.strip()] or [dcr_url]
 
@@ -137,6 +105,7 @@ def register(request):
             request.session["oauth_redirect_uri"] = redirect_uris[0]
 
             messages.success(request, f"Application {client_name} registered successfully!")
+            request.session["register_response"] = response.json()
         else:
             snippet = response.text.strip()
             truncated = snippet[:200] + ("…" if len(snippet) > 200 else "")
@@ -193,7 +162,7 @@ def authorize(request):
         "response_type": "code",
         "client_id": client_id,
         "redirect_uri": redirect_uri,
-        "scope": "read write openid profile email",
+        "scope": "read write",
         "state": state,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",

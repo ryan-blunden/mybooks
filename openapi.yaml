@@ -6,34 +6,6 @@ info:
     status tracking, reviews, and recommendations.
 paths:
   /api/users/:
-    post:
-      operationId: users_create
-      description: Create a new user account
-      summary: Create user
-      tags:
-      - users
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserRequest'
-        required: true
-      security:
-      - oauth2:
-        - read
-        - write
-      - tokenAuth: []
-      responses:
-        '201':
-          description: User successfully created
-        '400':
-          description: Validation error
     get:
       operationId: users_list
       description: List all users with filtering and search capabilities
@@ -103,30 +75,35 @@ paths:
       responses:
         '200':
           description: Paginated list of system users
-  /api/users/{id}/:
-    get:
-      operationId: users_retrieve
-      description: Get detailed information about a specific user
-      summary: Get user details
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user.
-        required: true
+    post:
+      operationId: users_create
+      description: Create a new user account
+      summary: Create user
       tags:
       - users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
       security:
       - oauth2:
         - read
         - write
       - tokenAuth: []
       responses:
-        '200':
-          description: Detailed user information
-        '404':
-          description: User not found
+        '201':
+          description: User successfully created
+        '400':
+          description: Validation error
+  /api/users/{id}/:
     delete:
       operationId: users_destroy
       description: Delete a user account
@@ -148,6 +125,29 @@ paths:
       responses:
         '204':
           description: User successfully deleted
+        '404':
+          description: User not found
+    get:
+      operationId: users_retrieve
+      description: Get detailed information about a specific user
+      summary: Get user details
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user.
+        required: true
+      tags:
+      - users
+      security:
+      - oauth2:
+        - read
+        - write
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Detailed user information
         '404':
           description: User not found
     put:
@@ -323,39 +323,6 @@ paths:
                     description: List of users in this group
           description: Users in the specified group
   /api/books/:
-    post:
-      operationId: create_book
-      description: Create a new catalog book with the required metadata (title, genre)
-        and optional tagline, description, or image. Provide the associated author
-        via the 'author_name' field; if the author does not already exist, the system
-        automatically creates one. Use this endpoint when onboarding new books into
-        the shared catalog or synchronizing titles from external feeds. Validation
-        errors report missing fields, invalid enum values, or duplicate titles when
-        combined with the same author.
-      summary: Create book
-      tags:
-      - books
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/BookRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/BookRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/BookRequest'
-        required: true
-      security:
-      - oauth2:
-        - read
-      - tokenAuth: []
-      responses:
-        '201':
-          description: Book created
-        '400':
-          description: Validation error
     get:
       operationId: list_catalog_books
       description: Browse the shared book catalog with comprehensive metadata, nested
@@ -489,33 +456,40 @@ paths:
       responses:
         '200':
           description: Paginated list of catalog books
-  /api/books/{id}/:
-    get:
-      operationId: get_book_catalog_details
-      description: Retrieve the complete catalog record for a single book, including
-        title, tagline, description, genre, timestamps, and embedded author metadata.
-        Use this endpoint when rendering book detail pages, prefilling edit forms,
-        or validating book information during integrations. Returns 404 when the book
-        id does not exist.
-      summary: Retrieve book
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this book.
-        required: true
+    post:
+      operationId: create_book
+      description: Create a new catalog book with the required metadata (title, genre)
+        and optional tagline, description, or image. Provide the associated author
+        via the 'author_name' field; if the author does not already exist, the system
+        automatically creates one. Use this endpoint when onboarding new books into
+        the shared catalog or synchronizing titles from external feeds. Validation
+        errors report missing fields, invalid enum values, or duplicate titles when
+        combined with the same author.
+      summary: Create book
       tags:
       - books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BookRequest'
+        required: true
       security:
       - oauth2:
         - read
       - tokenAuth: []
       responses:
-        '200':
-          description: Book details returned
-        '404':
-          description: Book not found
+        '201':
+          description: Book created
+        '400':
+          description: Validation error
+  /api/books/{id}/:
     delete:
       operationId: delete_book
       description: Delete a book from the shared catalog. This destructive action
@@ -540,6 +514,32 @@ paths:
       responses:
         '204':
           description: Book deleted
+        '404':
+          description: Book not found
+    get:
+      operationId: get_book_catalog_details
+      description: Retrieve the complete catalog record for a single book, including
+        title, tagline, description, genre, timestamps, and embedded author metadata.
+        Use this endpoint when rendering book detail pages, prefilling edit forms,
+        or validating book information during integrations. Returns 404 when the book
+        id does not exist.
+      summary: Retrieve book
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this book.
+        required: true
+      tags:
+      - books
+      security:
+      - oauth2:
+        - read
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Book details returned
         '404':
           description: Book not found
     put:
@@ -622,45 +622,6 @@ paths:
         '404':
           description: Book not found
   /api/user-books/:
-    post:
-      operationId: add_book_to_user_collection
-      description: Add a book to the authenticated user's personal collection with
-        initial reading status. You can either reference an existing book by its book_id
-        or create a completely new book entry if it doesn't exist in the system yet.
-        When adding an existing book, provide the book_id and desired reading_status
-        (defaults to 'want_to_read'). When creating a new book, provide complete book
-        details including title, author information, and genre. Use this tool when
-        a user wants to add a book to their personal library for tracking. The system
-        prevents duplicate entries - each user can only have one instance of each
-        book in their collection. The response includes the created UserBook relationship
-        with book details and initial status. This creates a tracking relationship
-        but doesn't modify the original book record if using an existing book. Requires
-        user authentication.
-      summary: Add a book to user's personal collection
-      tags:
-      - user-books
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserBookRequest'
-      security:
-      - oauth2:
-        - write
-      - tokenAuth: []
-      responses:
-        '201':
-          description: Book successfully added to user's collection with initial reading
-            status
-        '400':
-          description: Validation error, missing required fields, or book already
-            exists in user's collection
     get:
       operationId: list_user_personal_book_collection
       description: Retrieve all books in the authenticated user's personal collection
@@ -727,40 +688,46 @@ paths:
         '200':
           description: Paginated list of books in user's personal collection with
             reading status
-  /api/user-books/{id}/:
-    get:
-      operationId: get_book_from_user_collection
-      description: Retrieve comprehensive information about a specific book in the
-        authenticated user's personal collection using the userbook_id (not the book_id).
-        This endpoint returns the user's relationship to the book including current
-        reading status, when the book was added, complete book details (title, author,
-        description, genre), and any review the user has written for this book. Use
-        this tool when you need detailed information about how a specific user relates
-        to a specific book in their collection. The userbook_id is the unique identifier
-        for the user-book relationship, which you can get from the list endpoint.
-        This is different from the general book browsing endpoint - this shows user-specific
-        tracking information. Returns 404 if the userbook_id doesn't exist or doesn't
-        belong to the authenticated user. Requires user authentication.
-      summary: Get detailed information about a book in user's collection
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user book.
-        required: true
+    post:
+      operationId: add_book_to_user_collection
+      description: Add a book to the authenticated user's personal collection with
+        initial reading status. You can either reference an existing book by its book_id
+        or create a completely new book entry if it doesn't exist in the system yet.
+        When adding an existing book, provide the book_id and desired reading_status
+        (defaults to 'want_to_read'). When creating a new book, provide complete book
+        details including title, author information, and genre. Use this tool when
+        a user wants to add a book to their personal library for tracking. The system
+        prevents duplicate entries - each user can only have one instance of each
+        book in their collection. The response includes the created UserBook relationship
+        with book details and initial status. This creates a tracking relationship
+        but doesn't modify the original book record if using an existing book. Requires
+        user authentication.
+      summary: Add a book to user's personal collection
       tags:
       - user-books
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserBookRequest'
       security:
       - oauth2:
         - write
       - tokenAuth: []
       responses:
-        '200':
-          description: Complete book details with user's reading status, date added,
-            and review if available
-        '404':
-          description: UserBook relationship not found in authenticated user's collection
+        '201':
+          description: Book successfully added to user's collection with initial reading
+            status
+        '400':
+          description: Validation error, missing required fields, or book already
+            exists in user's collection
+  /api/user-books/{id}/:
     delete:
       operationId: remove_book_from_user_collection
       description: Remove a book from the authenticated user's personal collection
@@ -793,6 +760,39 @@ paths:
         '204':
           description: Book and tracking relationship successfully removed from user's
             collection
+        '404':
+          description: UserBook relationship not found in authenticated user's collection
+    get:
+      operationId: get_book_from_user_collection
+      description: Retrieve comprehensive information about a specific book in the
+        authenticated user's personal collection using the userbook_id (not the book_id).
+        This endpoint returns the user's relationship to the book including current
+        reading status, when the book was added, complete book details (title, author,
+        description, genre), and any review the user has written for this book. Use
+        this tool when you need detailed information about how a specific user relates
+        to a specific book in their collection. The userbook_id is the unique identifier
+        for the user-book relationship, which you can get from the list endpoint.
+        This is different from the general book browsing endpoint - this shows user-specific
+        tracking information. Returns 404 if the userbook_id doesn't exist or doesn't
+        belong to the authenticated user. Requires user authentication.
+      summary: Get detailed information about a book in user's collection
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this user book.
+        required: true
+      tags:
+      - user-books
+      security:
+      - oauth2:
+        - write
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Complete book details with user's reading status, date added,
+            and review if available
         '404':
           description: UserBook relationship not found in authenticated user's collection
     put:
@@ -840,37 +840,6 @@ paths:
         '404':
           description: UserBook relationship not found in authenticated user's collection
   /api/authors/:
-    post:
-      operationId: create_author
-      description: Create a new author record that can be referenced by catalog books
-        and user collections. Provide the author's name (unique), optional biography,
-        and optional profile image to seed future book ingestion. Use this endpoint
-        when onboarding new authors into the catalog or syncing authors from external
-        feeds. Validation errors highlight duplicate names or invalid field formats.
-      summary: Create author
-      tags:
-      - authors
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/AuthorRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/AuthorRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/AuthorRequest'
-        required: true
-      security:
-      - oauth2:
-        - read
-      - tokenAuth: []
-      responses:
-        '201':
-          description: Author created
-        '400':
-          description: Validation error
     get:
       operationId: list_authors_for_discovery
       description: Retrieve a paginated list of catalog authors with biography details,
@@ -912,33 +881,38 @@ paths:
       responses:
         '200':
           description: Paginated list of authors
-  /api/authors/{id}/:
-    get:
-      operationId: get_author_complete_details
-      description: Retrieve the complete profile for a specific author including biography
-        text, optional image, timestamps, and a list of books associated with that
-        author. Use this endpoint for author detail pages, edit screens, or whenever
-        you need both the author metadata and their catalog of books in a single payload.
-        Returns 404 when the author id is invalid or no longer exists.
-      summary: Retrieve author
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this author.
-        required: true
+    post:
+      operationId: create_author
+      description: Create a new author record that can be referenced by catalog books
+        and user collections. Provide the author's name (unique), optional biography,
+        and optional profile image to seed future book ingestion. Use this endpoint
+        when onboarding new authors into the catalog or syncing authors from external
+        feeds. Validation errors highlight duplicate names or invalid field formats.
+      summary: Create author
       tags:
       - authors
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthorRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AuthorRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AuthorRequest'
+        required: true
       security:
       - oauth2:
         - read
       - tokenAuth: []
       responses:
-        '200':
-          description: Author details returned
-        '404':
-          description: Author not found
+        '201':
+          description: Author created
+        '400':
+          description: Validation error
+  /api/authors/{id}/:
     delete:
       operationId: delete_author
       description: Delete an author from the catalog. This is a destructive action
@@ -963,6 +937,32 @@ paths:
       responses:
         '204':
           description: Author deleted
+        '404':
+          description: Author not found
+    get:
+      operationId: get_author_complete_details
+      description: Retrieve the complete profile for a specific author including biography
+        text, optional image, timestamps, and a list of books associated with that
+        author. Use this endpoint for author detail pages, edit screens, or whenever
+        you need both the author metadata and their catalog of books in a single payload.
+        Returns 404 when the author id is invalid or no longer exists.
+      summary: Retrieve author
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this author.
+        required: true
+      tags:
+      - authors
+      security:
+      - oauth2:
+        - read
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Author details returned
         '404':
           description: Author not found
     put:
@@ -1045,45 +1045,6 @@ paths:
         '404':
           description: Author not found
   /api/reviews/:
-    post:
-      operationId: create_user_book_review
-      description: Create a new review for a book that exists in the authenticated
-        user's personal collection. The review must include a star rating (integer
-        from 1-5) and can optionally include review text content. Users can only write
-        one review per book - attempting to create a duplicate review will result
-        in a validation error. The book being reviewed must already exist in the user's
-        collection (added via the user_books endpoints). Use this tool when a user
-        wants to rate and review a book they have read or are reading. The review
-        becomes part of the book's overall review collection and is associated with
-        both the user and the specific book. Reviews can be edited later using the
-        update endpoints. The system validates that the rating is within the 1-5 range
-        and that the user hasn't already reviewed this book. Requires user authentication
-        and the book must be in the user's collection.
-      summary: Write a new review for a book in user's collection
-      tags:
-      - reviews
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReviewRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/ReviewRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/ReviewRequest'
-        required: true
-      security:
-      - oauth2:
-        - write
-      - tokenAuth: []
-      responses:
-        '201':
-          description: Review successfully created with rating and optional text
-        '400':
-          description: Validation error, invalid rating, or user has already reviewed
-            this book
     get:
       operationId: list_user_book_reviews
       description: Retrieve all book reviews that the authenticated user has written,
@@ -1143,39 +1104,46 @@ paths:
         '200':
           description: Paginated list of all reviews written by the authenticated
             user
-  /api/reviews/{id}/:
-    get:
-      operationId: get_user_review_details
-      description: Retrieve complete information about a specific review written by
-        the authenticated user using the review_id. This endpoint returns the full
-        review details including the star rating, complete review text, creation and
-        last update timestamps, and comprehensive information about the book being
-        reviewed (title, author, genre, description). Use this tool when you need
-        detailed information about a specific review, such as when editing a review
-        or displaying full review content. The review_id must correspond to a review
-        written by the authenticated user - users cannot access reviews written by
-        other users through this endpoint. The response includes both the review data
-        and associated book metadata for context. Returns 404 if the review_id doesn't
-        exist or doesn't belong to the authenticated user. Requires user authentication.
-      summary: Get detailed information about a specific user review
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this review.
-        required: true
+    post:
+      operationId: create_user_book_review
+      description: Create a new review for a book that exists in the authenticated
+        user's personal collection. The review must include a star rating (integer
+        from 1-5) and can optionally include review text content. Users can only write
+        one review per book - attempting to create a duplicate review will result
+        in a validation error. The book being reviewed must already exist in the user's
+        collection (added via the user_books endpoints). Use this tool when a user
+        wants to rate and review a book they have read or are reading. The review
+        becomes part of the book's overall review collection and is associated with
+        both the user and the specific book. Reviews can be edited later using the
+        update endpoints. The system validates that the rating is within the 1-5 range
+        and that the user hasn't already reviewed this book. Requires user authentication
+        and the book must be in the user's collection.
+      summary: Write a new review for a book in user's collection
       tags:
       - reviews
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ReviewRequest'
+        required: true
       security:
       - oauth2:
         - write
       - tokenAuth: []
       responses:
-        '200':
-          description: Complete review details with associated book information
-        '404':
-          description: Review not found or not owned by authenticated user
+        '201':
+          description: Review successfully created with rating and optional text
+        '400':
+          description: Validation error, invalid rating, or user has already reviewed
+            this book
+  /api/reviews/{id}/:
     delete:
       operationId: delete_user_book_review
       description: Permanently delete a review written by the authenticated user using
@@ -1206,6 +1174,38 @@ paths:
       responses:
         '204':
           description: Review permanently deleted from the system
+        '404':
+          description: Review not found or not owned by authenticated user
+    get:
+      operationId: get_user_review_details
+      description: Retrieve complete information about a specific review written by
+        the authenticated user using the review_id. This endpoint returns the full
+        review details including the star rating, complete review text, creation and
+        last update timestamps, and comprehensive information about the book being
+        reviewed (title, author, genre, description). Use this tool when you need
+        detailed information about a specific review, such as when editing a review
+        or displaying full review content. The review_id must correspond to a review
+        written by the authenticated user - users cannot access reviews written by
+        other users through this endpoint. The response includes both the review data
+        and associated book metadata for context. Returns 404 if the review_id doesn't
+        exist or doesn't belong to the authenticated user. Requires user authentication.
+      summary: Get detailed information about a specific user review
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this review.
+        required: true
+      tags:
+      - reviews
+      security:
+      - oauth2:
+        - write
+      - tokenAuth: []
+      responses:
+        '200':
+          description: Complete review details with associated book information
         '404':
           description: Review not found or not owned by authenticated user
     put:
