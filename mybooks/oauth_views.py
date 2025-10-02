@@ -20,7 +20,6 @@ def oauth_metadata(request):
     return JsonResponse(get_oauth_server_metadata())
 
 
-@login_required
 def apps(request):
     code_challenge = request.session.get("oauth_code_challenge")
 
@@ -32,14 +31,35 @@ def apps(request):
         request.session["oauth_code_verifier"] = code_verifier
         request.session["oauth_code_challenge"] = code_challenge
 
+    token_request_payload = None
+    if request.GET.get("code") and request.get("state"):
+        token_request_payload = {
+            "grant_type": "authorization_code",
+            "code": request.GET.code,
+            "state": request.GET.state,
+            "redirect_uri": request.session.get("oauth_redirect_uri"),
+            "client_id": request.session.get("oauth_client_id"),
+            "code_verifier": request.session.get("oauth_code_verifier"),
+        }
+
     register_response = request.session.get("register_response", None)
     if register_response:
-        application = Application.objects.get(client_id=register_response.get("client_id"))
-        application.user = request.user
-        application.save()
+        if request.user.is_authenticated:
+            application = Application.objects.get(client_id=register_response.get("client_id"))
+            application.user = request.user
+            application.save()
+        else:
+            # So application can be associated after login
+            request.session["last_registered_client_id"] = register_response.get("client_id")
 
         register_response = json.dumps(register_response, indent=4)
         request.session.pop("register_response", None)
+
+    if request.session.get("last_registered_client_id") and request.user.is_authenticated:
+        application = Application.objects.get(client_id=request.session["last_registered_client_id"])
+        application.user = request.user
+        application.save()
+        request.session.pop("last_registered_client_id")
 
     tokens = request.session.get("oauth_tokens")
     if tokens is not None:
@@ -58,13 +78,14 @@ def apps(request):
         "token_endpoint_auth_method": "none",
     }
 
-    applications = Application.objects.filter(user=request.user).order_by("-created")
+    applications = Application.objects.filter(user=request.user).order_by("-created") if request.user.is_authenticated else []
     context = {
         "registration_data": registration_data,
         "register_response": register_response,
         "oauth_metadata_url": request.build_absolute_uri(reverse("oauth-discovery-info")),
         "oauth_oidc_metadata_url": request.build_absolute_uri(reverse("oauth2_provider:oidc-connect-discovery-info")),
         "oauth_state": request.session.get("oauth_state"),
+        "token_request_payload": token_request_payload,
         "applications": applications,
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
@@ -74,7 +95,6 @@ def apps(request):
     return render(request, "oauth_apps.html", context)
 
 
-@login_required
 @require_POST
 def register(request):
     dcr_url = request.build_absolute_uri(reverse("oauth-register"))

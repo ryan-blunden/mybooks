@@ -43,11 +43,8 @@
                     <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Register Response</h2>
                     <pre
                         class="bg-gray-100 dark:bg-gray-900 rounded p-4 text-sm font-mono overflow-x-auto border border-gray-200 dark:border-gray-700"
-                    >
-                        {{ register_response }}
-                        </pre
-                        >
-                    </div>
+                    >{{ register_response }}</pre>
+                </div>
             {% endif %}
 
             {% if request.GET.code %}
@@ -57,16 +54,7 @@
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Token Request Payload</label>
                         <pre
                             class="bg-gray-100 dark:bg-gray-900 rounded p-4 text-sm font-mono overflow-x-auto border border-gray-200 dark:border-gray-700"
-                        >
-                            {
-                            "grant_type": "authorization_code",
-                            "code": "{{ request.GET.code }}",
-                            "state": "{{ request.GET.state }}",
-                            "redirect_uri": "{{ request.session.oauth_redirect_uri }}",
-                            "client_id": "{{ request.session.oauth_client_id }}",
-                            "code_verifier": "{{ request.session.oauth_code_verifier }}"
-                            }
-                        </pre>
+                        >{{ token_request_payload }}</pre>
                     </div>
 
                     <div class="space-y-4">
