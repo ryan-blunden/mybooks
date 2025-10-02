@@ -45,13 +45,13 @@ def get_oauth_server_metadata() -> dict:
         "revocation_endpoint": f"{base_url}{reverse('oauth2_provider:revoke-token')}",
     }
 
-    if settings.OAUTH2_PROVIDER.get("OIDC_ENABLED", False):
-        metadata.update(
-            {
-                "userinfo_endpoint": f"{base_url}{reverse('oauth2_provider:user-info')}",
-                "jwks_uri": f"{base_url}{reverse('oauth2_provider:jwks-info')}",
-            }
-        )
+    # if settings.OAUTH2_PROVIDER.get("OIDC_ENABLED", False):
+    #     metadata.update(
+    #         {
+    #             "userinfo_endpoint": f"{base_url}{reverse('oauth2_provider:user-info')}",
+    #             "jwks_uri": f"{base_url}{reverse('oauth2_provider:jwks-info')}",
+    #         }
+    #     )
 
     metadata.update(
         {

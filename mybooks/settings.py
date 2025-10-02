@@ -404,23 +404,30 @@ REST_FRAMEWORK = {
     "PAGE_SIZE": 20,
 }
 
+OIDC_ENABLED = os.environ.get("OAUTH_OIDC_RSA_PRIVATE_KEY") is not None
 OAUTH2_PROVIDER = {
-    # this is the list of available scopes
     "ALLOWED_SCHEMES": ["http", "https"] if DEBUG else ["https"],
-    "OIDC_ENABLED": os.environ.get("OAUTH_OIDC_RSA_PRIVATE_KEY") is not None,
     "OIDC_RSA_PRIVATE_KEY": os.environ.get("OAUTH_OIDC_RSA_PRIVATE_KEY"),
     "OAUTH2_VALIDATOR_CLASS": "mybooks.oauth_validators.CustomOAuth2Validator",
     "SCOPES": {
         "read": "Read access",
         "write": "Write access",
-        "openid": "OIDC identity",
-        "profile": "Basic profile info",
-        "email": "Email address",
     },
-    # Allow PKCE without client authentication
     "PKCE_REQUIRED": True,
     "ALLOW_UNSAFE_CONFIDENTIAL_PKCE": False,
 }
+
+if OIDC_ENABLED:
+    OAUTH2_PROVIDER["OIDC_ENABLED"] = True
+    OAUTH2_PROVIDER["OIDC_RSA_PRIVATE_KEY"] = os.environ.get("OAUTH_OIDC_RSA_PRIVATE_KEY")
+    OAUTH2_PROVIDER["SCOPES"].update(
+        {
+            "openid": "OIDC identity",
+            "profile": "Basic profile info",
+            "email": "Email address",
+        }
+    )
+
 
 OAUTH_DCR_SETTINGS = {
     # Grant types allowed for dynamic registration (RFC 7591 safe defaults)

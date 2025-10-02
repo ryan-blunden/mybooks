@@ -2,9 +2,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiParameter, OpenApiResponse, extend_schema, extend_schema_view
 from oauth2_provider.contrib.rest_framework import IsAuthenticatedOrTokenHasScope
 from rest_framework import viewsets
-from rest_framework.decorators import api_view, permission_classes
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from .models import Author, Book, Review, UserBook
@@ -12,7 +10,6 @@ from .serializers import (
     AuthorDetailSerializer,
     AuthorSerializer,
     BookSerializer,
-    DebugHeadersResponseSerializer,
     GenreSerializer,
     ReviewSerializer,
     UserBookDetailSerializer,
@@ -663,58 +660,3 @@ class GenreViewSet(viewsets.ViewSet):
 
         serializer = self.get_serializer(genre_obj)
         return Response(serializer.data, status=http_status.HTTP_200_OK)
-
-
-# AIDEV-NOTE: Debug view to inspect request headers - remove after debugging auth issues
-@extend_schema(
-    methods=["GET"],
-    operation_id="debug_request_headers",
-    summary="Inspect request headers and auth info",
-    description="Temporary diagnostic endpoint to view incoming request headers and resolved auth metadata.",
-    tags=["debug"],
-    responses=DebugHeadersResponseSerializer,
-    request=None,
-)
-@extend_schema(
-    methods=["POST"],
-    operation_id="debug_request_headers_submit",
-    summary="Inspect request headers and auth info",
-    description="Temporary diagnostic endpoint to view incoming request headers and resolved auth metadata. "
-    "Use POST to examine how headers and authentication behave with bodies.",
-    tags=["debug"],
-    responses=DebugHeadersResponseSerializer,
-    request=None,
-)
-@api_view(["GET", "POST"])
-@permission_classes([AllowAny])  # Allow without auth for debugging
-def debug_headers(request):
-    """
-    Debug endpoint to see all request headers and auth info.
-    Accessible at /api/debug/headers/
-    """
-    headers = {}
-    for key, value in request.META.items():
-        if key.startswith("HTTP_"):
-            header_name = key[5:].replace("_", "-").title()
-            headers[header_name] = value
-        elif key in ["CONTENT_TYPE", "CONTENT_LENGTH"]:
-            headers[key.replace("_", "-").title()] = value
-
-    auth_info = {
-        "user": str(request.user),
-        "is_authenticated": request.user.is_authenticated,
-        "auth_object": str(request.auth) if request.auth else None,
-        "auth_type": type(request.auth).__name__ if request.auth else None,
-    }
-
-    return Response(
-        {
-            "method": request.method,
-            "path": request.path,
-            "headers": headers,
-            "auth_info": auth_info,
-            "remote_addr": request.META.get("REMOTE_ADDR"),
-            "user_agent": request.META.get("HTTP_USER_AGENT"),
-            "message": "This endpoint shows all headers and auth info for debugging",
-        }
-    )

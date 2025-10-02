@@ -48,8 +48,7 @@ FORCE_RERUN_KEY = "_force_rerun"
 # OAUTHhttps://mybooks.ngrok.app
 OAUTH_SERVER_URL = os.environ["OAUTH_SERVER_URL"]
 REDIRECT_URI = APP_URL
-AUTH_OAUTH_SCOPE = "read write openid profile email"
-APP_OAUTH_SCOPE = "read write"
+OAUTH_SCOPES = "read write"
 OAUTH_USER_AUTH_CLIENT_ID = os.environ.get("OAUTH_USER_AUTH_CLIENT_ID")
 
 try:
@@ -267,7 +266,7 @@ def render_connection_setup() -> None:
             authorize_url = oauth_flow.start_authorization_flow(
                 name=oauth_flow.FLOW_USER_LOGIN,
                 client_id=OAUTH_USER_AUTH_CLIENT_ID,
-                scope=AUTH_OAUTH_SCOPE,
+                scope=OAUTH_SCOPES,
                 redirect_uri=REDIRECT_URI,
                 authorization_endpoint=OAUTH_METADATA.authorization_endpoint,
                 reuse_existing=True,
@@ -315,7 +314,7 @@ def render_connection_setup() -> None:
                         registration_endpoint=registration_endpoint,
                         client_name=client_name,
                         redirect_uri=REDIRECT_URI,
-                        scope=APP_OAUTH_SCOPE,
+                        scope=OAUTH_SCOPES,
                     )
                 except requests.HTTPError as exc:
                     response = exc.response
@@ -371,7 +370,7 @@ def render_connection_setup() -> None:
             authorize_url = oauth_flow.start_authorization_flow(
                 name=oauth_flow.FLOW_APP_AUTHORIZE,
                 client_id=app_state.client_id,
-                scope=APP_OAUTH_SCOPE,
+                scope=OAUTH_SCOPES,
                 redirect_uri=REDIRECT_URI,
                 authorization_endpoint=OAUTH_METADATA.authorization_endpoint,
                 reuse_existing=True,

@@ -12,5 +12,4 @@ router.register(r"genres", views.GenreViewSet, basename="genre")
 
 urlpatterns = [
     path("", include(router.urls)),
-    path("debug/headers/", views.debug_headers, name="debug_headers"),
 ]

@@ -32,15 +32,18 @@ def apps(request):
         request.session["oauth_code_challenge"] = code_challenge
 
     token_request_payload = None
-    if request.GET.get("code") and request.get("state"):
-        token_request_payload = {
-            "grant_type": "authorization_code",
-            "code": request.GET.code,
-            "state": request.GET.state,
-            "redirect_uri": request.session.get("oauth_redirect_uri"),
-            "client_id": request.session.get("oauth_client_id"),
-            "code_verifier": request.session.get("oauth_code_verifier"),
-        }
+    if request.GET.get("code") and request.GET.get("state"):
+        token_request_payload = json.dumps(
+            {
+                "grant_type": "authorization_code",
+                "code": request.GET.get("code"),
+                "state": request.GET.get("state"),
+                "redirect_uri": request.session.get("oauth_redirect_uri"),
+                "client_id": request.session.get("oauth_client_id"),
+                "code_verifier": request.session.get("oauth_code_verifier"),
+            },
+            indent=4,
+        )
 
     register_response = request.session.get("register_response", None)
     if register_response:
