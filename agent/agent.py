@@ -26,7 +26,7 @@ from pydantic_ai.messages import (
     ToolReturnPart,
 )
 from streamlit_cookies_controller import CookieController as StreamlitCookieController
-from utils import first_query_value, truncate
+from utils import first_query_value, flatten_exceptions, truncate
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only
     pass
@@ -464,18 +464,6 @@ def extract_tool_activity(messages: List[ModelMessage]) -> tuple[List[str], bool
         return combined, True
 
     return [], False
-
-
-def flatten_exceptions(exc: BaseException) -> List[BaseException]:
-    """Recursively flatten ExceptionGroup hierarchies for human-friendly error reporting."""
-
-    if isinstance(exc, BaseExceptionGroup):
-        flattened: List[BaseException] = []
-        for inner in exc.exceptions:  # type: ignore[attr-defined]
-            flattened.extend(flatten_exceptions(inner))
-        return flattened
-
-    return [exc]
 
 
 def init() -> None:
