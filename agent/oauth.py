@@ -8,7 +8,7 @@ from typing import Any, Dict, Mapping, MutableMapping, Tuple
 
 import requests
 
-from mybooks.utils import build_code_challenge, get_code_verifier
+from mybooks.utils import get_code_verifier
 
 
 class OAuthDiscoveryError(RuntimeError):
@@ -63,12 +63,6 @@ def generate_pkce_pair() -> Tuple[str, str, str]:
 
     code_verifier, code_challenge = get_code_verifier()
     return code_verifier, code_challenge, "S256"
-
-
-def build_pkce_challenge(code_verifier: str) -> Tuple[str, str]:
-    """Compute the PKCE challenge for a pre-existing verifier."""
-
-    return build_code_challenge(code_verifier), "S256"
 
 
 def exchange_code_for_tokens(

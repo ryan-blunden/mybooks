@@ -471,7 +471,6 @@ class BookViewSet(viewsets.ModelViewSet):
     need to manage the universe of available books.
     """
 
-    # AIDEV-NOTE: Deleting catalog books cascades to user collections and reviews; confirm intent before bulk deletes.
     queryset = Book.objects.all()
     serializer_class = BookSerializer
     permission_classes = [IsAuthenticatedOrTokenHasScope]

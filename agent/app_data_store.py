@@ -107,7 +107,6 @@ class AppDataStore:
             self._app_data = AppData()
         return self._app_data
 
-    # AIDEV-NOTE: Cookie-backed ids partition persisted data per browser session pending proper subject identifiers.
     @property
     def user_key(self) -> str:
         return self._user_session_key
@@ -163,7 +162,11 @@ class AppDataStore:
         self.save()
 
     def delete(self) -> None:
-        self._data_path().unlink(missing_ok=True)
+        if self._session_file_path is None:
+            return
+
+        self._session_file_path.unlink(missing_ok=True)
+        self._app_data = AppData()
 
 
 @dataclass(frozen=True)

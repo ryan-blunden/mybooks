@@ -280,10 +280,7 @@ def render_connection_setup() -> None:
 
         st.markdown("##### Dynamic Client Registration")
         st.text("Register a new application (authentication not required).")
-        # if not app_state.client_id:
-        #     st.text("Register a new client application.")
-        # if not user_authenticated:
-        #     st.info("Sign in first to enable dynamic client registration.")
+
         if client_registered:
             st.success(f"Client ID: {app_state.client_id}.")
         else:
@@ -511,10 +508,14 @@ def render_sidebar() -> None:
     app_data = st.session_state.app_data_store.app_data
     with st.sidebar:
         st.subheader("Session")
-        # st.caption("Prototype uses hard-coded model & API key. Later steps move these to env vars.")
 
-        if st.button("New conversation", use_container_width=True):
+        if st.button("New Conversation", use_container_width=True):
             st.session_state.messages = []
+            st.rerun()
+
+        if st.button("Clear Session", use_container_width=True):
+            st.session_state.app_data_store.delete()
+            st.session_state.pop("messages", None)
             st.rerun()
 
         st.divider()

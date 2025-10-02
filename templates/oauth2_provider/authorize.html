@@ -1,8 +1,6 @@
 {% extends "base.html" %}
-{# AIDEV-NOTE: Authorization view styled to mirror Sentry MCP inspector for richer OAuth consent UX. #}
-{% load i18n %}
 
-{% block title %}{% trans "Authorize Application" %}{% endblock %}
+{% block title %}Authorize Application{% endblock %}
 
 {% block body %}
     <div class="min-h-screen flex items-center justify-center py-8 px-4 bg-gray-50 dark:bg-gray-900">
@@ -25,23 +23,23 @@
 
                         <div class="grid gap-6 sm:grid-cols-2 text-sm text-gray-700 dark:text-gray-300">
                             <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-6 sm:col-span-2">
-                                <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-white">{% trans "Name" %}</p>
+                                <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-white">Name</p>
                                 <p class="mt-1 text font-medium text-gray-900 dark:text-white break-words">{{ application.name }}</p>
                             </div>
                             <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-6 sm:col-span-2">
-                                <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-white">{% trans "Redirect URIs" %}</p>
+                                <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-white">Redirect URIs</p>
                                 <div class="mt-1 text-base text-gray-700 dark:text-gray-300">
-                                    {{ application.redirect_uris|default:_("No redirect URIs configured") }}
+                                    {{ application.redirect_uris|default:"No redirect URIs configured" }}
                                 </div>
                             </div>
                             <div class="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 p-6 sm:col-span-2">
-                                <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-white">{% trans "Client ID" %}</p>
+                                <p class="text-xs uppercase tracking-wider text-gray-500 dark:text-white">Client ID</p>
                                 <p class="mt-1 font-mono text-base text-gray-700 dark:text-gray-300">{{ application.client_id }}</p>
                             </div>
                         </div>
 
                         <div class="space-y-4">
-                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{% trans "Permissions" %}</h2>
+                            <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Permissions</h2>
                             {% if scopes_descriptions %}
                                 <div class="space-y-2">
                                     {% for scope in scopes_descriptions %}
@@ -57,7 +55,7 @@
                                 </div>
                             {% else %}
                                 <p class="text-sm text-gray-600 dark:text-gray-400">
-                                    {% trans "This application is not requesting any additional permissions." %}
+                                    This application is not requesting any additional permissions.
                                 </p>
                             {% endif %}
                         </div>
@@ -73,13 +71,13 @@
                             <input
                                 type="submit"
                                 class="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 px-6 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-800 hover:cursor-pointer"
-                                value="{% trans 'Cancel' %}"
+                                value="Cancel"
                             />
                             <input
                                 type="submit"
                                 name="allow"
                                 class="w-full sm:w-auto inline-flex justify-center rounded-lg bg-primary-700 dark:bg-primary-600 px-6 py-2.5 text-sm font-medium text-white transition hover:bg-primary-800 dark:hover:bg-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:focus:ring-primary-800 hover:cursor-pointer"
-                                value="{% trans 'Authorize' %}"
+                                value="Authorize"
                             />
                         </div>
                     </form>
@@ -87,10 +85,10 @@
             {% else %}
                 <div class="rounded-lg border border-red-300 dark:border-red-800 bg-red-50 dark:bg-gray-800 shadow-sm p-10">
                     <h1 class="text-2xl font-semibold text-red-800 dark:text-red-400 mb-2">
-                        {% trans "Authorization Error" %}
+                        Authorization Error
                     </h1>
                     <p class="text-sm text-red-800 dark:text-red-400">
-                        <span class="font-medium">{% trans "Error" %}:</span> {{ error.error }}
+                        <span class="font-medium">Error:</span> {{ error.error }}
                     </p>
                     <p class="mt-2 text-sm text-red-700 dark:text-red-400">{{ error.description }}</p>
                 </div>
