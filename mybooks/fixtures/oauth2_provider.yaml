@@ -1,17 +1,17 @@
 - model: oauth2_provider.application
   pk: 1
   fields:
-    client_id: CKpPhu6aa6b24bw5tz2l0rdMrUwDXbL3i4OGvPlQ
-    user: 1
-    redirect_uris: http://localhost:8080/noexist/callback
+    client_id: xqwcYT7SB6lrUIElPyvn7ww8s577UTUCRRmwTTKN
+    user: null
+    redirect_uris: "http://localhost:8080/oauth-apps\r\nhttps://mybooks.ngrok.app/oauth-apps\r\nhttp://localhost:9090\r\nhttps://mybooks-agent.ngrok.app"
     post_logout_redirect_uris: ''
-    client_type: confidential
+    client_type: public
     authorization_grant_type: authorization-code
-    client_secret: pbkdf2_sha256$1000000$K4A2mLsmnGjdt8pqajGolh$u9IzuVdvE3sngf95qoBWqRzCCBH+4O11rjLuPByISdg=
+    client_secret: pbkdf2_sha256$1000000$GMPr3xbLAHvOkdim2hJ4kx$Hyf1qOumyJKGa6VPNhnmf+YDJlYESUcrz92LnbwV55w=
     hash_client_secret: true
-    name: OAuth
-    skip_authorization: false
-    created: 2025-09-24 08:40:17.372963+00:00
-    updated: 2025-09-24 08:40:17.373000+00:00
-    algorithm: ''
-    allowed_origins: ''
+    name: Agent Application Authentication
+    skip_authorization: true
+    created: 2025-09-29 04:03:37.389014+00:00
+    updated: 2025-10-02 02:57:37.274444+00:00
+    algorithm: RS256
+    allowed_origins: "https://mybooks-agent.ngrok.app\r\nhttp://localhost:9090"
