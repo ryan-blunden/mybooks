@@ -3,7 +3,7 @@ from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import include, path, re_path
 from django.views.static import serve
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from oauth2_provider import urls as oauth2_urls
 from oauth_dcr.views import DynamicClientRegistrationView
 
@@ -20,13 +20,17 @@ urlpatterns = [
     path("api/", include("mybooks.api_urls")),
     path("api/", include("books.urls")),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
-    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
-    path("api/redoc/", SpectacularRedocView.as_view(url_name="schema"), name="redoc"),
+    path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="api-docs"),
     # OAuth
     path("oauth/", include(oauth2_urls)),
     path("oauth/register/", DynamicClientRegistrationView.as_view(), name="oauth-register"),
-    path(".well-known/oauth-authorization-server", oauth_views.oauth_metadata, name="oauth-discovery-info"),
-    # Oauth debugging views
+    path(".well-known/oauth-authorization-server", oauth_views.oauth_server_metadata, name="oauth-discovery-info"),
+    path(
+        ".well-known/oauth-protected-resource",
+        oauth_views.oauth_protected_resource_metadata,
+        name="oauth-resource-info",
+    ),
+    # App views
     path("oauth-apps/", oauth_views.apps, name="oauth-apps"),
     path("oauth-apps-register/", oauth_views.register, name="oauth-apps-register"),
     path("oauth-apps-authorize/", oauth_views.authorize, name="oauth-apps-authorize"),

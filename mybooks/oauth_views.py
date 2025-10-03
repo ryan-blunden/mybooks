@@ -12,12 +12,47 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 from oauth2_provider.models import Application
 
-from mybooks.utils import build_code_challenge, get_code_verifier, get_oauth_server_metadata
+from mybooks.utils import build_code_challenge, get_code_verifier
 
 
-def oauth_metadata(request):
-    """Provide OAuth2 provider metadata."""
-    return JsonResponse(get_oauth_server_metadata())
+def oauth_server_metadata(request):
+
+    metadata = {
+        "issuer": settings.SITE_URL,
+        "authorization_endpoint": f"{settings.SITE_URL}{reverse('oauth2_provider:authorize')}",
+        "token_endpoint": f"{settings.SITE_URL}{reverse('oauth2_provider:token')}",
+        "registration_endpoint": f"{settings.SITE_URL}{reverse('oauth-register')}",
+        "introspection_endpoint": f"{settings.SITE_URL}{reverse('oauth2_provider:introspect')}",
+        "revocation_endpoint": f"{settings.SITE_URL}{reverse('oauth2_provider:revoke-token')}",
+        "scopes_supported": list(settings.OAUTH2_PROVIDER["SCOPES"].keys()),
+        "response_types_supported": ["code"],
+        "response_modes_supported": ["query"],
+        "grant_types_supported": ["authorization_code", "refresh_token"],
+        "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post", "none"],
+        "code_challenge_methods_supported": ["plain", "S256"],
+    }
+
+    if settings.OAUTH2_PROVIDER.get("OIDC_ENABLED", False):
+        metadata.update(
+            {
+                "userinfo_endpoint": f"{settings.SITE_URL}{reverse('oauth2_provider:user-info')}",
+                "jwks_uri": f"{settings.SITE_URL}{reverse('oauth2_provider:jwks-info')}",
+            }
+        )
+    return JsonResponse(metadata)
+
+
+def oauth_protected_resource_metadata(request):
+    metadata = {
+        "resource_name": "MyBooks API",
+        "resource": f"{settings.SITE_URL}/api",
+        "resource_documentation": request.build_absolute_uri(reverse("api-docs")),
+        "authorization_servers": [settings.SITE_URL],
+        "bearer_methods_supported": ["header"],
+        "scopes_supported": list(settings.OAUTH2_PROVIDER["SCOPES"].keys()),
+    }
+
+    return JsonResponse(metadata)
 
 
 def apps(request):
@@ -47,27 +82,20 @@ def apps(request):
 
     register_response = request.session.get("register_response", None)
     if register_response:
-        if request.user.is_authenticated:
-            application = Application.objects.get(client_id=register_response.get("client_id"))
-            application.user = request.user
-            application.save()
-        else:
-            # So application can be associated after login
-            request.session["last_registered_client_id"] = register_response.get("client_id")
-
+        request.session["unauthorized_application_client_id"] = register_response.get("client_id")
         register_response = json.dumps(register_response, indent=4)
         request.session.pop("register_response", None)
 
-    if request.session.get("last_registered_client_id") and request.user.is_authenticated:
-        application = Application.objects.get(client_id=request.session["last_registered_client_id"])
+    if request.session.get("unauthorized_application_client_id") and request.user.is_authenticated:
+        application = Application.objects.get(client_id=request.session["unauthorized_application_client_id"])
         application.user = request.user
         application.save()
-        request.session.pop("last_registered_client_id")
 
     tokens = request.session.get("oauth_tokens")
     if tokens is not None:
         tokens = json.dumps(tokens, indent=4)
         request.session.pop("oauth_tokens", None)
+        request.session.pop("unauthorized_application_client_id", None)
 
     # Pre-fill registration data for new application
     registration_data = {
@@ -85,6 +113,7 @@ def apps(request):
     context = {
         "registration_data": registration_data,
         "register_response": register_response,
+        "unauthorized_application_client_id": request.session.get("unauthorized_application_client_id"),
         "oauth_metadata_url": request.build_absolute_uri(reverse("oauth-discovery-info")),
         "oauth_oidc_metadata_url": request.build_absolute_uri(reverse("oauth2_provider:oidc-connect-discovery-info")),
         "oauth_state": request.session.get("oauth_state"),
@@ -93,7 +122,6 @@ def apps(request):
         "code_challenge": code_challenge,
         "code_challenge_method": "S256",
         "oauth_tokens": tokens,
-        "oauth_server_metadata": json.dumps(get_oauth_server_metadata(), indent=2),
     }
     return render(request, "oauth_apps.html", context)
 
@@ -144,15 +172,19 @@ def register(request):
 
 
 @login_required
-@require_POST
 def authorize(request):
-    app_id = request.POST.get("app_id")
-    if not app_id:
+    """Start the authorization redirect for the selected OAuth application."""
+    client_id = request.GET.get("client_id")
+
+    if not client_id:
+        client_id = request.session.get("unauthorized_application_client_id")
+
+    if not client_id:
         messages.error(request, "Missing application identifier for authorization.")
         return HttpResponseRedirect(reverse("oauth-apps"))
 
     try:
-        application = Application.objects.get(pk=app_id)
+        application = Application.objects.get(client_id=client_id)
     except Application.DoesNotExist:
         messages.error(request, "The selected application could not be found.")
         return HttpResponseRedirect(reverse("oauth-apps"))
