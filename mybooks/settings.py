@@ -39,6 +39,8 @@ LOGOUT_REDIRECT_URL = "/oauth-apps/"
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
+REQUESTS_VERIFY_SSL = strtobool(os.getenv("REQUESTS_VERIFY_SSL", "true"))
+
 DEBUG = bool(strtobool(os.getenv("DEBUG", "false")))
 
 DEBUG_TOOLBAR_ENABLED = bool(strtobool(os.getenv("DEBUG_TOOLBAR_ENABLED", "false")))

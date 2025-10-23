@@ -20,8 +20,6 @@ _UNSET = object()
 
 @dataclass
 class AppData:
-    user_session_key: Optional[str] = None
-    user_access_token: Optional[str] = None
     user_refresh_token: Optional[str] = None
     oauth_client_id: Optional[str] = None
     oauth_access_token: Optional[str] = None
@@ -35,8 +33,6 @@ class AppData:
     @classmethod
     def from_json(cls, payload: Dict[str, Any]) -> "AppData":
         known_fields = {
-            "user_access_token": payload.get("user_access_token"),
-            "user_refresh_token": payload.get("user_refresh_token"),
             "oauth_client_id": payload.get("oauth_client_id"),
             "oauth_access_token": payload.get("oauth_access_token"),
             "oauth_refresh_token": payload.get("oauth_refresh_token"),
@@ -52,13 +48,6 @@ class AppData:
 
     def to_json(self) -> Dict[str, Any]:
         return asdict(self)
-
-    @property
-    def user_auth(self) -> "UserAuthState":
-        return UserAuthState(
-            access_token=self.user_access_token,
-            refresh_token=self.user_refresh_token,
-        )
 
     @property
     def app_auth(self) -> "AppAuthState":
@@ -120,8 +109,6 @@ class AppDataStore:
     def update(
         self,
         *,
-        user_access_token: Optional[str] | object = _UNSET,
-        user_refresh_token: Optional[str] | object = _UNSET,
         oauth_client_id: Optional[str] | object = _UNSET,
         oauth_access_token: Optional[str] | object = _UNSET,
         oauth_refresh_token: Optional[str] | object = _UNSET,
@@ -131,8 +118,6 @@ class AppDataStore:
     ) -> AppData:
 
         payload = {
-            "user_access_token": self._app_data.user_access_token,
-            "user_refresh_token": self._app_data.user_refresh_token,
             "oauth_client_id": self._app_data.oauth_client_id,
             "oauth_access_token": self._app_data.oauth_access_token,
             "oauth_refresh_token": self._app_data.oauth_refresh_token,
@@ -141,10 +126,6 @@ class AppDataStore:
             "registration_client_payload": self._app_data.registration_client_payload,
         }
 
-        if user_access_token is not _UNSET:
-            payload["user_access_token"] = user_access_token
-        if user_refresh_token is not _UNSET:
-            payload["user_refresh_token"] = user_refresh_token
         if oauth_client_id is not _UNSET:
             payload["oauth_client_id"] = oauth_client_id
         if oauth_access_token is not _UNSET:

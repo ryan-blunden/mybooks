@@ -5,6 +5,7 @@ from django.urls import include, path, re_path
 from django.views.static import serve
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from oauth2_provider import urls as oauth2_urls
+from oauth2_provider.views import ConnectDiscoveryInfoView
 from oauth_dcr.views import DynamicClientRegistrationView
 
 from mybooks import core_views, oauth_views
@@ -60,6 +61,15 @@ urlpatterns = [
     # Media
     re_path(r"^media/(?P<path>.*)$", serve, {"document_root": settings.MEDIA_ROOT}),
 ]
+
+if settings.OIDC_ENABLED:
+    urlpatterns.append(
+        path(
+            ".well-known/openid-configuration",
+            ConnectDiscoveryInfoView.as_view(),
+            name="oidc-connect-discovery-info",
+        )
+    )
 
 if settings.ENV == "development":
     urlpatterns.insert(0, path("components/", include("django_components.urls")))

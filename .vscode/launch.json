@@ -51,7 +51,6 @@
       "args": ["run", "agent/agent.py", "--server.port", "9090", "--logger.level", "info", "--server.headless", "true"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
-      "envFile": "${workspaceFolder}/agent/.env",
       "justMyCode": false,
       "env": {
         "DOPPLER_ENV": "1",

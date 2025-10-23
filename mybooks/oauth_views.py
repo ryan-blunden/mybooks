@@ -10,7 +10,7 @@ from django.http import HttpResponseRedirect, JsonResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.http import require_POST
-from oauth2_provider.models import Application
+from oauth2_provider.models import AbstractGrant, Application
 
 from mybooks.utils import build_code_challenge, get_code_verifier
 
@@ -25,11 +25,8 @@ def oauth_server_metadata(request):
         "introspection_endpoint": f"{settings.SITE_URL}{reverse('oauth2_provider:introspect')}",
         "revocation_endpoint": f"{settings.SITE_URL}{reverse('oauth2_provider:revoke-token')}",
         "scopes_supported": list(settings.OAUTH2_PROVIDER["SCOPES"].keys()),
-        "response_types_supported": ["code"],
-        "response_modes_supported": ["query"],
-        "grant_types_supported": ["authorization_code", "refresh_token"],
-        "token_endpoint_auth_methods_supported": ["client_secret_basic", "client_secret_post", "none"],
-        "code_challenge_methods_supported": ["plain", "S256"],
+        "grant_types_supported": ["authorization_code", "refresh_token", "client_credentials"],
+        "code_challenge_methods_supported": [key for key, _ in AbstractGrant.CODE_CHALLENGE_METHODS],
     }
 
     if settings.OAUTH2_PROVIDER.get("OIDC_ENABLED", False):
@@ -145,6 +142,7 @@ def register(request):
     try:
         response = requests.post(
             dcr_url,
+            verify=settings.REQUESTS_VERIFY_SSL,
             json=registration_data,
             headers={"Content-Type": "application/json"},
             cookies=request.COOKIES,
@@ -263,6 +261,7 @@ def get_tokens(request):
 
     response = requests.post(
         token_url,
+        verify=settings.REQUESTS_VERIFY_SSL,
         data=token_data,
         headers={"Content-Type": "application/x-www-form-urlencoded", "Cache-Control": "no-cache"},
     )
