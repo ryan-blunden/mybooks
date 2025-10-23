@@ -51,6 +51,7 @@
       "args": ["run", "client/client.py", "--server.port", "9090", "--logger.level", "info", "--server.headless", "true"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
       "justMyCode": false,
       "env": {
         "DOPPLER_ENV": "1",
