@@ -53,7 +53,7 @@ class ClientAppData:
         return asdict(self)
 
     @property
-    def app_auth(self) -> "ClientAppState":
+    def client(self) -> "ClientAppState":
         return ClientAppState(
             client_id=self.client_id,
             client_name=self.client_name,

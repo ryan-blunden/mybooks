@@ -231,12 +231,12 @@ def render_connection_setup() -> None:
 
     consume_oauth_notice()
 
-    app_state = st.session_state.app_data_store.app_data.app_auth
+    client = st.session_state.app_data_store.app_data.client
 
-    client_registered = app_state.is_registered
-    client_authorized = app_state.is_authorized
+    client_registered = client.is_registered
+    client_authorized = client.is_authorized
 
-    with st.expander("Metadata Discovery", expanded=True):
+    with st.expander("Metadata Discovery", expanded=client.client_id is None):
         st.markdown("##### OAuth 2.0 Protected Resource Metadata")
         st.text(f"Discovered URL: {OAUTH_METADATA.protected_metadata_url}\n")
         protected_payload = json.dumps(OAUTH_METADATA.protected_metadata.to_dict(), indent=2) if OAUTH_METADATA.protected_metadata else "{}"
@@ -246,12 +246,12 @@ def render_connection_setup() -> None:
         st.text(f"Discovered URL: {OAUTH_METADATA.auth_server_metadata_url}\n")
         st.code(json.dumps(OAUTH_METADATA.auth_server_metadata.to_dict(), indent=2), language="json")
 
-    with st.expander("Registration and Authorization", expanded=True):
+    with st.expander("Registration and Authorization", expanded=client.access_token is None):
         st.markdown("##### Dynamic Client Registration")
         st.text("Register a new client application")
 
         if client_registered:
-            st.success(f"Client ID: {app_state.client_id}.")
+            st.success(f"Client ID: {client.client_id}.")
         else:
             client_name = st.session_state.get("pending_client_name")
             if not isinstance(client_name, str):
@@ -331,7 +331,7 @@ def render_connection_setup() -> None:
         else:
             authorize_url = oauth_flow.start_authorization_flow(
                 name=oauth_flow.FLOW_APP_AUTHORIZE,
-                client_id=app_state.client_id,
+                client_id=client.client_id,
                 scope=OAUTH_SCOPES,
                 redirect_uri=REDIRECT_URI,
                 authorization_endpoint=OAUTH_METADATA.auth_server_metadata.authorization_endpoint,
@@ -441,8 +441,8 @@ def init() -> None:
     st.session_state.app_data_store = app_data_store
 
     headers: Dict[str, str] = {}
-    app_state = app_data_store.app_data.app_auth
-    token = app_state.access_token or ""
+    client = app_data_store.app_data.client
+    token = client.access_token or ""
     mcp_server: Optional[MCPServerStreamableHTTP] = None
     if token:
         headers["Authorization"] = f"Bearer {token}"
@@ -501,7 +501,7 @@ def render_sidebar() -> None:
                     tools_error = None
 
         tools_display: Any = f"Error: {tools_error}" if tools_error else tools
-        app_state = app_data.app_auth
+        client = app_data.client
         st.write(
             {
                 "url": MCP_SERVER_URL,
@@ -509,17 +509,17 @@ def render_sidebar() -> None:
             }
         )
 
-        if app_state.client_id:
+        if client.client_id:
             st.divider()
             st.subheader("Client Application")
             st.text("Tokens in shown in plain text for debugging purposes.")
 
             client_info = {
-                "client_name": app_state.client_name,
-                "client_id": app_state.client_id,
-                "client_redirect_uris": app_state.client_redirect_uris,
-                "app_access_token": app_state.access_token if app_state.access_token else None,
-                "app_refresh_token": app_state.refresh_token if app_state.refresh_token else None,
+                "client_name": client.client_name,
+                "client_id": client.client_id,
+                "client_redirect_uris": client.client_redirect_uris,
+                "app_access_token": client.access_token if client.access_token else None,
+                "app_refresh_token": client.refresh_token if client.refresh_token else None,
             }
             st.write(client_info)
 
