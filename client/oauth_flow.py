@@ -23,7 +23,7 @@ class OAuthFlowError(RuntimeError):
 
 def _flow_path(name: str) -> Path:
     safe = name.replace("/", "-")
-    return Path(tempfile.gettempdir()) / f"agent-oauth-{safe}.json"
+    return Path(tempfile.gettempdir()) / f"client-oauth-{safe}.json"
 
 
 @dataclass
@@ -191,7 +191,6 @@ class AuthorizationFlow:
             client_id=client_id,
             redirect_uri=state.redirect_uri,
             code_verifier=state.code_verifier,
-            state=returned_state,
         )
 
         self.clear()
