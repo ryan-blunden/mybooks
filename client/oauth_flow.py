@@ -191,7 +191,6 @@ class AuthorizationFlow:
             client_id=client_id,
             redirect_uri=state.redirect_uri,
             code_verifier=state.code_verifier,
-            state=returned_state,
         )
 
         self.clear()

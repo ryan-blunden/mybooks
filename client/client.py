@@ -64,7 +64,6 @@ except OAuthDiscoveryError as e:
     st.error(str(e))
     st.stop()
 
-MCP_SERVER_URL = os.environ["MCP_SERVER_URL"]
 
 CLIENT_DCR_REQUIRES_AUTH = strtobool(os.environ.get("CLIENT_DCR_REQUIRES_AUTH", "false"))
 SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", "You are a helpful assistant. Use tools if needed.")
@@ -519,8 +518,8 @@ def render_sidebar() -> None:
                 "client_name": client.client_name,
                 "client_id": client.client_id,
                 "client_redirect_uris": client.client_redirect_uris,
-                "app_access_token": client.access_token if client.access_token else None,
-                "app_refresh_token": client.refresh_token if client.refresh_token else None,
+                "access_token": client.access_token if client.access_token else None,
+                "refresh_token": client.refresh_token if client.refresh_token else None,
             }
             st.write(client_info)
 

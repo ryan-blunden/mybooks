@@ -28,8 +28,6 @@ class ClientAppData:
     registration_client_uri: Optional[str] = None
     registration_client_payload: Optional[Dict[str, Any]] = None
 
-    """Manage persistence of :class:`AppData` objects."""
-
     @classmethod
     def from_json(cls, payload: Dict[str, Any]) -> "ClientAppData":
         known_fields = {

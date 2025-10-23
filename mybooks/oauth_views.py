@@ -96,7 +96,7 @@ def apps(request):
 
     # Pre-fill registration data for new application
     registration_data = {
-        "client_name": f"My Books Client",
+        "client_name": "My Books Client",
         "redirect_uris": [request.build_absolute_uri(reverse("oauth-apps"))],
         "grant_types": ["authorization_code", "refresh_token"],
         "response_types": ["code"],

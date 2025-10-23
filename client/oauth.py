@@ -58,8 +58,8 @@ class OAuthServerMetadata(DictMixin):
     issuer: str
     authorization_endpoint: str
     token_endpoint: str
-    registration_endpoint: str
-    revocation_endpoint: str
+    registration_endpoint: str | None = None
+    revocation_endpoint: str | None = None
     scopes_supported: Tuple[str, ...] = ()
     grant_types_supported: Tuple[str, ...] = ()
     code_challenge_methods_supported: Tuple[str, ...] = ()
@@ -285,7 +285,6 @@ def exchange_code_for_tokens(
     client_id: str,
     redirect_uri: str,
     code_verifier: str,
-    state: str | None = None,
     session: requests.Session | None = None,
 ) -> Dict[str, Any]:
     """Exchange an authorization code for tokens using PKCE."""
@@ -297,18 +296,16 @@ def exchange_code_for_tokens(
         "client_id": client_id,
         "code_verifier": code_verifier,
     }
-    if state:
-        payload["state"] = state
 
     transport = session or requests
     response = transport.post(
         token_endpoint,
         data=payload,
         headers={"Content-Type": "application/x-www-form-urlencoded", "Cache-Control": "no-cache"},
-        timeout=10,
+        timeout=_DEFAULT_TIMEOUT_SECONDS,
     )
     response.raise_for_status()
     token_data = response.json()
     if not isinstance(token_data, Mapping):
-        raise RuntimeError("Token endpoint returned non-JSON response")
+        raise TypeError("Token endpoint returned non-JSON response")
     return dict(token_data)
