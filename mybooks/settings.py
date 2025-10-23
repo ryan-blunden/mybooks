@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 
 import sentry_sdk
+import truststore
 from django.db.models import signals as django_signals
 from django_components import ComponentsSettings
 from dotenv import load_dotenv
@@ -23,6 +24,7 @@ from sentry_sdk.integrations.django import DjangoIntegration
 
 from mybooks.utils import strtobool
 
+truststore.inject_into_ssl()
 logger = logging.getLogger(__name__)
 
 # Build paths inside the project like this: BASE_DIR / "subdir".
@@ -39,7 +41,6 @@ LOGOUT_REDIRECT_URL = "/oauth-apps/"
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 
-REQUESTS_VERIFY_SSL = strtobool(os.getenv("REQUESTS_VERIFY_SSL", "true"))
 
 DEBUG = bool(strtobool(os.getenv("DEBUG", "false")))
 

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from dataclasses import asdict, dataclass, is_dataclass
 from functools import lru_cache
 from typing import Any, Callable, Dict, Iterable, Mapping, MutableMapping, Optional, Tuple, TypeVar
@@ -10,10 +9,10 @@ from urllib.parse import urlparse
 
 import requests
 
-from mybooks.utils import get_code_verifier, strtobool
+from mybooks.utils import get_code_verifier
 
 _DEFAULT_TIMEOUT_SECONDS = 10
-REQUESTS_VERIFY_SSL = strtobool(os.getenv("REQUESTS_VERIFY_SSL", "true"))
+
 
 T = TypeVar("T")
 
@@ -104,7 +103,7 @@ def _string_sequence(value: Any) -> Tuple[str, ...]:
 
 def _fetch_json_document(url: str) -> Mapping[str, Any] | None:
     try:
-        response = requests.get(url, verify=REQUESTS_VERIFY_SSL, timeout=_DEFAULT_TIMEOUT_SECONDS)
+        response = requests.get(url, timeout=_DEFAULT_TIMEOUT_SECONDS)
     except requests.RequestException as exc:  # pragma: no cover - network failure path
         raise OAuthDiscoveryError(f"OAuth discovery request failed for {url}: {exc}") from exc
 
@@ -304,7 +303,6 @@ def exchange_code_for_tokens(
     transport = session or requests
     response = transport.post(
         token_endpoint,
-        verify=REQUESTS_VERIFY_SSL,
         data=payload,
         headers={"Content-Type": "application/x-www-form-urlencoded", "Cache-Control": "no-cache"},
         timeout=10,

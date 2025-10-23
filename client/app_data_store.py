@@ -25,7 +25,6 @@ class ClientAppData:
     client_redirect_uris: Optional[List[str]] = None
     oauth_access_token: Optional[str] = None
     oauth_refresh_token: Optional[str] = None
-    registration_access_token: Optional[str] = None
     registration_client_uri: Optional[str] = None
     registration_client_payload: Optional[Dict[str, Any]] = None
 
@@ -39,7 +38,6 @@ class ClientAppData:
             "client_redirect_uris": payload.get("client_redirect_uris"),
             "oauth_access_token": payload.get("oauth_access_token"),
             "oauth_refresh_token": payload.get("oauth_refresh_token"),
-            "registration_access_token": payload.get("registration_access_token"),
             "registration_client_uri": payload.get("registration_client_uri"),
         }
         registration_payload = payload.get("registration_client_payload")
@@ -60,7 +58,6 @@ class ClientAppData:
             client_redirect_uris=self.client_redirect_uris,
             access_token=self.oauth_access_token,
             refresh_token=self.oauth_refresh_token,
-            registration_access_token=self.registration_access_token,
             registration_client_uri=self.registration_client_uri,
         )
 
@@ -119,7 +116,6 @@ class ClientAppDataStore:
         client_redirect_uris: Optional[List[str]] | object = _UNSET,
         oauth_access_token: Optional[str] | object = _UNSET,
         oauth_refresh_token: Optional[str] | object = _UNSET,
-        registration_access_token: Optional[str] | object = _UNSET,
         registration_client_uri: Optional[str] | object = _UNSET,
         registration_client_payload: Optional[Dict[str, Any]] | object = _UNSET,
     ) -> ClientAppData:
@@ -130,7 +126,6 @@ class ClientAppDataStore:
             "client_redirect_uris": self._app_data.client_redirect_uris,
             "oauth_access_token": self._app_data.oauth_access_token,
             "oauth_refresh_token": self._app_data.oauth_refresh_token,
-            "registration_access_token": self._app_data.registration_access_token,
             "registration_client_uri": self._app_data.registration_client_uri,
             "registration_client_payload": self._app_data.registration_client_payload,
         }
@@ -145,8 +140,6 @@ class ClientAppDataStore:
             payload["oauth_access_token"] = oauth_access_token
         if oauth_refresh_token is not _UNSET:
             payload["oauth_refresh_token"] = oauth_refresh_token
-        if registration_access_token is not _UNSET:
-            payload["registration_access_token"] = registration_access_token
         if registration_client_uri is not _UNSET:
             payload["registration_client_uri"] = registration_client_uri
         if registration_client_payload is not _UNSET:
@@ -182,7 +175,6 @@ class ClientAppState:
     client_redirect_uris: Optional[List[str]]
     access_token: Optional[str]
     refresh_token: Optional[str]
-    registration_access_token: Optional[str]
     registration_client_uri: Optional[str]
 
     @property

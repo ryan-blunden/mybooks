@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import secrets
 import tempfile
 from dataclasses import dataclass, replace
@@ -14,11 +13,8 @@ from urllib.parse import urlencode
 import requests
 from oauth import exchange_code_for_tokens, generate_pkce_pair
 
-from mybooks.utils import strtobool
-
 FLOW_USER_LOGIN = "user_login"
 FLOW_APP_AUTHORIZE = "app_authorize"
-REQUESTS_VERIFY_SSL = strtobool(os.getenv("REQUESTS_VERIFY_SSL", "true"))
 
 
 class OAuthFlowError(RuntimeError):
@@ -297,7 +293,7 @@ def register_dynamic_client(
         "Content-Type": "application/json",
     }
 
-    response = requests.post(registration_endpoint, verify=REQUESTS_VERIFY_SSL, json=payload, headers=headers, timeout=10)
+    response = requests.post(registration_endpoint, json=payload, headers=headers, timeout=10)
     response.raise_for_status()
 
     try:

@@ -142,7 +142,6 @@ def register(request):
     try:
         response = requests.post(
             dcr_url,
-            verify=settings.REQUESTS_VERIFY_SSL,
             json=registration_data,
             headers={"Content-Type": "application/json"},
             cookies=request.COOKIES,
@@ -261,7 +260,6 @@ def get_tokens(request):
 
     response = requests.post(
         token_url,
-        verify=settings.REQUESTS_VERIFY_SSL,
         data=token_data,
         headers={"Content-Type": "application/x-www-form-urlencoded", "Cache-Control": "no-cache"},
     )

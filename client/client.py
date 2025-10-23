@@ -10,6 +10,7 @@ import httpx
 import oauth_flow
 import requests
 import streamlit as st
+import truststore
 from app_data_store import ClientAppData, ClientAppDataStore
 from dotenv import load_dotenv
 from oauth import OAuthDiscoveryError, OAuthMetadata, discover_oauth_metadata
@@ -53,6 +54,8 @@ MCP_SERVER_URL = os.environ["MCP_SERVER_URL"]
 REDIRECT_URI = CLIENT_URL
 OAUTH_SCOPES = "read write"
 OAUTH_USER_AUTH_CLIENT_ID = os.environ.get("OAUTH_USER_AUTH_CLIENT_ID")
+
+truststore.inject_into_ssl()
 
 try:
     OAUTH_METADATA: OAuthMetadata = discover_oauth_metadata(MCP_SERVER_URL)
@@ -207,7 +210,6 @@ def reset_client_authorization(*, clear_registration: bool = False) -> None:
                 "client_id": None,
                 "client_name": None,
                 "client_redirect_uris": None,
-                "registration_access_token": None,
                 "registration_client_uri": None,
                 "registration_client_payload": None,
             }
@@ -305,7 +307,6 @@ def render_connection_setup() -> None:
                     client_id=client_id,
                     client_name=client_name,
                     client_redirect_uris=client_redirect_uris,
-                    registration_access_token=client_data.get("registration_access_token"),
                     registration_client_uri=client_data.get("registration_client_uri"),
                     registration_client_payload=client_data,
                 )
