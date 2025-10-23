@@ -70,6 +70,8 @@ SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", "You are a helpful assistant. Us
 MODEL_NAME = os.environ["OPENAI_MODEL"]
 API_KEY = os.environ["OPENAI_API_KEY"]
 os.environ["OPENAI_API_KEY"] = os.environ["OPENAI_API_KEY"]
+USER_AVATAR = ":material/person_outline:"
+ASSISTANT_AVATAR = ":material/smart_toy:"
 
 MODEL_RESPONSE_SPINNER = """
 <style>
@@ -526,18 +528,20 @@ def render_sidebar() -> None:
 
 def render_chat_history(messages: List[Dict[str, str]]) -> None:
     for message in messages:
-        with st.chat_message(message["role"]):
+        role = message["role"]
+        avatar = USER_AVATAR if role == "user" else ASSISTANT_AVATAR if role == "assistant" else None
+        with st.chat_message(role, avatar=avatar):
             st.markdown(message["content"])
 
 
 def handle_chat_turn(prompt: str) -> None:
     st.session_state.messages.append({"role": "user", "content": prompt})
-    with st.chat_message("user"):
+    with st.chat_message("user", avatar=USER_AVATAR):
         st.markdown(prompt)
 
     agent: Agent = st.session_state.agent
 
-    with st.chat_message("assistant"):
+    with st.chat_message("assistant", avatar=ASSISTANT_AVATAR):
         response_placeholder = st.empty()
 
         async def run_agent() -> None:
