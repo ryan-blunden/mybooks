@@ -222,3 +222,4 @@ uploads
 db
 *.log
 agent/.session*
+client/.session*

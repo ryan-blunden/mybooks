@@ -10,7 +10,7 @@ import httpx
 import oauth_flow
 import requests
 import streamlit as st
-from app_data_store import AppData, AppDataStore
+from app_data_store import ClientAppData, ClientAppDataStore
 from dotenv import load_dotenv
 from oauth import OAuthDiscoveryError, OAuthMetadata, discover_oauth_metadata
 from pydantic_ai import Agent
@@ -43,14 +43,14 @@ else:
     load_dotenv()
 
 # APP
-APP_URL = os.environ["APP_URL"]
-CURRENT_APP_DATA: Optional[AppData] = None
+CLIENT_URL = os.environ["CLIENT_URL"]
+CURRENT_APP_DATA: Optional[ClientAppData] = None
 FORCE_RERUN_KEY = "_force_rerun"
 
 MCP_SERVER_URL = os.environ["MCP_SERVER_URL"]
 
 # OAUTH
-REDIRECT_URI = APP_URL
+REDIRECT_URI = CLIENT_URL
 OAUTH_SCOPES = "read write"
 OAUTH_USER_AUTH_CLIENT_ID = os.environ.get("OAUTH_USER_AUTH_CLIENT_ID")
 
@@ -61,15 +61,13 @@ except OAuthDiscoveryError as e:
     st.error(str(e))
     st.stop()
 
-# AGENT
-AGENT_DCR_REQUIRES_AUTH = strtobool(os.environ.get("AGENT_DCR_REQUIRES_AUTH", "false"))
+MCP_SERVER_URL = os.environ["MCP_SERVER_URL"]
+
+CLIENT_DCR_REQUIRES_AUTH = strtobool(os.environ.get("CLIENT_DCR_REQUIRES_AUTH", "false"))
 SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", "You are a helpful assistant. Use tools if needed.")
 MODEL_NAME = os.environ["OPENAI_MODEL"]
 API_KEY = os.environ["OPENAI_API_KEY"]
 os.environ["OPENAI_API_KEY"] = os.environ["OPENAI_API_KEY"]
-
-# MCP
-MCP_SERVER_URL = os.environ["MCP_SERVER_URL"]
 
 MODEL_RESPONSE_SPINNER = """
 <style>
@@ -196,7 +194,7 @@ def process_oauth_callback() -> None:
     st.rerun()
 
 
-def reset_agent_authorization(*, clear_registration: bool = False) -> None:
+def reset_client_authorization(*, clear_registration: bool = False) -> None:
     """Clear stored authorization tokens (and optionally registration metadata)."""
 
     update_kwargs: Dict[str, Any] = {
@@ -206,7 +204,9 @@ def reset_agent_authorization(*, clear_registration: bool = False) -> None:
     if clear_registration:
         update_kwargs.update(
             {
-                "oauth_client_id": None,
+                "client_id": None,
+                "client_name": None,
+                "client_redirect_uris": None,
                 "registration_access_token": None,
                 "registration_client_uri": None,
                 "registration_client_payload": None,
@@ -227,7 +227,7 @@ def reset_agent_authorization(*, clear_registration: bool = False) -> None:
 
 
 def render_connection_setup() -> None:
-    """Render the guided OAuth setup flow for the agent."""
+    """Render the guided OAuth setup flow for the client."""
 
     consume_oauth_notice()
 
@@ -269,7 +269,7 @@ def render_connection_setup() -> None:
             st.session_state.pending_client_name = effective_name
             client_name = effective_name
 
-            def register_client() -> None:
+            def register_client(client_name: str) -> None:
                 try:
                     client_data = oauth_flow.register_dynamic_client(
                         registration_endpoint=OAUTH_METADATA.auth_server_metadata.registration_endpoint,
@@ -297,13 +297,14 @@ def render_connection_setup() -> None:
                     set_oauth_notice("error", f"Registration failed: {exc}")
                     return
 
-                client_id = client_data.get("client_id")
-                if not client_id:
-                    set_oauth_notice("error", "Registration response missing client_id.")
-                    return
+                client_id = client_data["client_id"]
+                client_name = client_data["client_name"]
+                client_redirect_uris = client_data["redirect_uris"]
 
                 st.session_state.app_data_store.update(
-                    oauth_client_id=client_id,
+                    client_id=client_id,
+                    client_name=client_name,
+                    client_redirect_uris=client_redirect_uris,
                     registration_access_token=client_data.get("registration_access_token"),
                     registration_client_uri=client_data.get("registration_client_uri"),
                     registration_client_payload=client_data,
@@ -314,7 +315,7 @@ def render_connection_setup() -> None:
                 set_oauth_notice("success", "Client registered successfully.")
                 schedule_rerun()
 
-            st.button("Register", on_click=register_client, use_container_width=True)
+            st.button("Register", on_click=lambda: register_client(client_name), use_container_width=True)
 
         st.markdown("##### Authorize Registered Client")
         st.text("Use authorization code flow with PKCE to authorize client.")
@@ -324,7 +325,7 @@ def render_connection_setup() -> None:
             st.success("Client authorized and tokens cached.")
             st.button(
                 "Reset authorization tokens",
-                on_click=reset_agent_authorization,
+                on_click=reset_client_authorization,
                 use_container_width=True,
             )
         else:
@@ -428,8 +429,6 @@ def extract_tool_activity(messages: List[ModelMessage]) -> tuple[List[str], bool
 
 
 def init() -> None:
-    """Bootstrap Streamlit session state for chat + agent."""
-
     st.set_page_config(page_title="MCP OAuth Playground", layout="wide", page_icon=Path("../mybooks/static/mybooks/img/favicon.png"))
     st.title("MCP OAuth Playground")
     st.text("Uses OAuth protected resource and auth server discovery, Dynamic Client Registration, and PKCE authorization code flow.")
@@ -438,7 +437,7 @@ def init() -> None:
     while len(cookies.getAll()) == 0:
         time.sleep(1)
 
-    app_data_store: AppDataStore = AppDataStore(cookies=cookies)
+    app_data_store: ClientAppDataStore = ClientAppDataStore(cookies=cookies)
     st.session_state.app_data_store = app_data_store
 
     headers: Dict[str, str] = {}
@@ -483,7 +482,7 @@ def render_sidebar() -> None:
             st.rerun()
 
         st.divider()
-        st.subheader("Agent Config")
+        st.subheader("Model Config")
         st.write({"prompt": SYSTEM_PROMPT, "model": MODEL_NAME})
 
         st.divider()
@@ -514,10 +513,11 @@ def render_sidebar() -> None:
             st.divider()
             st.subheader("Client Application")
             st.text("Tokens in shown in plain text for debugging purposes.")
-            client_payload = app_data.registration_client_payload or {}
+
             client_info = {
-                "name": client_payload.get("client_name") or "unknown",
+                "client_name": app_state.client_name,
                 "client_id": app_state.client_id,
+                "client_redirect_uris": app_state.client_redirect_uris,
                 "app_access_token": app_state.access_token if app_state.access_token else None,
                 "app_refresh_token": app_state.refresh_token if app_state.refresh_token else None,
             }
@@ -591,7 +591,7 @@ def handle_chat_turn(prompt: str) -> None:
 
             tool_activity, tool_call_detected = extract_tool_activity(result.new_messages())
             if tool_call_detected and tool_activity:
-                with st.expander("Agent Activity", expanded=False):
+                with st.expander("Model Activity", expanded=False):
                     for entry in tool_activity:
                         st.markdown(entry)
 

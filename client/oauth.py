@@ -1,11 +1,11 @@
-"""OAuth helper utilities for the Streamlit agent."""
+"""OAuth helper utilities for the Streamlit client."""
 
 from __future__ import annotations
 
 import os
 from dataclasses import asdict, dataclass, is_dataclass
 from functools import lru_cache
-from typing import Any, Callable, Dict, Iterable, Mapping, MutableMapping, Tuple, TypeVar
+from typing import Any, Callable, Dict, Iterable, Mapping, MutableMapping, Optional, Tuple, TypeVar
 from urllib.parse import urlparse
 
 import requests
@@ -47,11 +47,11 @@ class DictMixin:
 class OAuthProtectedMetadata(DictMixin):
     issuer: str
     authorization_servers: Tuple[str, ...]
-    resource_name: str | None = None
-    resource: str | None = None
-    resource_documentation: str | None = None
-    bearer_methods_supported: Tuple[str, ...] | None = None
-    scopes_supported: Tuple[str, ...] | None = None
+    resource_name: Optional[str] = None
+    resource: Optional[str] = None
+    resource_documentation: Optional[str] = None
+    bearer_methods_supported: Optional[Tuple[str, ...]] = None
+    scopes_supported: Optional[Tuple[str, ...]] = None
 
 
 @dataclass(frozen=True)
@@ -59,20 +59,20 @@ class OAuthServerMetadata(DictMixin):
     issuer: str
     authorization_endpoint: str
     token_endpoint: str
-    registration_endpoint: str | None
-    introspection_endpoint: str | None = None
-    revocation_endpoint: str | None = None
+    registration_endpoint: str
+    revocation_endpoint: str
     scopes_supported: Tuple[str, ...] = ()
     grant_types_supported: Tuple[str, ...] = ()
     code_challenge_methods_supported: Tuple[str, ...] = ()
+    introspection_endpoint: Optional[str] = None
 
 
 @dataclass(frozen=True)
 class OAuthMetadata(DictMixin):
     auth_server_metadata: OAuthServerMetadata
-    protected_metadata: OAuthProtectedMetadata | None = None
-    protected_metadata_url: str | None = None
-    auth_server_metadata_url: str | None = None
+    auth_server_metadata_url: str
+    protected_metadata: Optional[OAuthProtectedMetadata] = None
+    protected_metadata_url: Optional[str] = None
 
 
 def _require_text(payload: Mapping[str, Any], field: str) -> str:

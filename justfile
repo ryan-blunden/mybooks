@@ -20,7 +20,7 @@ dev-dependencies:
 
 env-file:
     doppler secrets download --project mybooks --config server --no-file --format docker > .env
-    doppler secrets download --project mybooks --config agent --no-file --format docker > agent/.env
+    doppler secrets download --project mybooks --config client --no-file --format docker > client/.env
 
 dev-server:
     doppler run --project mybooks --config server -- uv run manage.py runserver_plus [::]:8080
@@ -45,11 +45,11 @@ export-api-spec:
 server-ngrok:
     ngrok http --url mybooks.ngrok.app 8080
 
-agent-run:
-    doppler run --project mybooks --config agent -- streamlit run agent/agent.py --server.port 9090 --logger.level info --server.headless true
+client-run:
+    doppler run --project mybooks --config client -- streamlit run client/client.py --server.port 9090 --logger.level info --server.headless true
 
-agent-ngrok:
-    ngrok http --url mybooks-agent.ngrok.app 9090
+client-ngrok:
+    ngrok http --url mcp-oauth-client.ngrok.app 9090
 
 collectstatic:
    uv run manage.py tailwind build

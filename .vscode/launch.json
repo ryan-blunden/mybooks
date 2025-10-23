@@ -44,17 +44,17 @@
       }
     },
     {
-      "name": "Agent",
+      "name": "Client",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/.venv/bin/streamlit",
-      "args": ["run", "agent/agent.py", "--server.port", "9090", "--logger.level", "info", "--server.headless", "true"],
+      "args": ["run", "client/client.py", "--server.port", "9090", "--logger.level", "info", "--server.headless", "true"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "justMyCode": false,
       "env": {
         "DOPPLER_ENV": "1",
-        "DOPPLER_CONFIG": "agent",
+        "DOPPLER_CONFIG": "client",
         "PYTHONPATH": "."
       }
     },

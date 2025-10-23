@@ -1,4 +1,4 @@
-"""Persistence helpers for Streamlit agent OAuth data."""
+"""Persistence helpers for Streamlit client OAuth data."""
 
 from __future__ import annotations
 
@@ -6,22 +6,23 @@ import json
 import uuid
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from streamlit_cookies_controller import CookieController as StreamlitCookieController
 
 CURRENT_USER_KEY: Optional[str] = None
-USER_COOKIE_NAME = "mybooks-agent-user"
-USER_COOKIE_SESSION_KEY = "agent_user_identifier"
+USER_COOKIE_NAME = "streamlit-client-user"
+USER_COOKIE_SESSION_KEY = "streamlit-client-user-session"
 USER_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
-_AGENT_DIR = Path(__file__).resolve().parent
+_CLIENT_DIR = Path(__file__).resolve().parent
 _UNSET = object()
 
 
 @dataclass
-class AppData:
-    user_refresh_token: Optional[str] = None
-    oauth_client_id: Optional[str] = None
+class ClientAppData:
+    client_id: Optional[str] = None
+    client_name: Optional[str] = None
+    client_redirect_uris: Optional[List[str]] = None
     oauth_access_token: Optional[str] = None
     oauth_refresh_token: Optional[str] = None
     registration_access_token: Optional[str] = None
@@ -31,9 +32,11 @@ class AppData:
     """Manage persistence of :class:`AppData` objects."""
 
     @classmethod
-    def from_json(cls, payload: Dict[str, Any]) -> "AppData":
+    def from_json(cls, payload: Dict[str, Any]) -> "ClientAppData":
         known_fields = {
-            "oauth_client_id": payload.get("oauth_client_id"),
+            "client_id": payload.get("client_id"),
+            "client_name": payload.get("client_name"),
+            "client_redirect_uris": payload.get("client_redirect_uris"),
             "oauth_access_token": payload.get("oauth_access_token"),
             "oauth_refresh_token": payload.get("oauth_refresh_token"),
             "registration_access_token": payload.get("registration_access_token"),
@@ -50,9 +53,11 @@ class AppData:
         return asdict(self)
 
     @property
-    def app_auth(self) -> "AppAuthState":
-        return AppAuthState(
-            client_id=self.oauth_client_id,
+    def app_auth(self) -> "ClientAppState":
+        return ClientAppState(
+            client_id=self.client_id,
+            client_name=self.client_name,
+            client_redirect_uris=self.client_redirect_uris,
             access_token=self.oauth_access_token,
             refresh_token=self.oauth_refresh_token,
             registration_access_token=self.registration_access_token,
@@ -60,9 +65,9 @@ class AppData:
         )
 
 
-class AppDataStore:
-    _instance: AppDataStore = None
-    _app_data: AppData = None
+class ClientAppDataStore:
+    _instance: ClientAppDataStore = None
+    _app_data: ClientAppData = None
     _user_session_key: str = None
     _session_file_path: Path = None
     _cookies: StreamlitCookieController = None
@@ -78,22 +83,22 @@ class AppDataStore:
             self._user_session_key = uuid.uuid4().hex
             self._cookies.set(USER_COOKIE_NAME, self._user_session_key)
 
-        self._session_file_path = Path(_AGENT_DIR / f".session-{self._user_session_key}.json")
+        self._session_file_path = Path(_CLIENT_DIR / f".session-{self._user_session_key}.json")
 
         if not self._session_file_path.exists():
-            self._app_data = AppData()
+            self._app_data = ClientAppData()
             self.save()
 
         raw = self._session_file_path.read_text(encoding="utf-8")
         data = json.loads(raw)
 
-        self._app_data = AppData.from_json(data)
+        self._app_data = ClientAppData.from_json(data)
 
     @property
-    def app_data(self) -> AppData:
+    def app_data(self) -> ClientAppData:
         """Return the current app data."""
         if self._app_data is None:
-            self._app_data = AppData()
+            self._app_data = ClientAppData()
         return self._app_data
 
     @property
@@ -109,16 +114,20 @@ class AppDataStore:
     def update(
         self,
         *,
-        oauth_client_id: Optional[str] | object = _UNSET,
+        client_id: Optional[str] | object = _UNSET,
+        client_name: Optional[str] | object = _UNSET,
+        client_redirect_uris: Optional[List[str]] | object = _UNSET,
         oauth_access_token: Optional[str] | object = _UNSET,
         oauth_refresh_token: Optional[str] | object = _UNSET,
         registration_access_token: Optional[str] | object = _UNSET,
         registration_client_uri: Optional[str] | object = _UNSET,
         registration_client_payload: Optional[Dict[str, Any]] | object = _UNSET,
-    ) -> AppData:
+    ) -> ClientAppData:
 
         payload = {
-            "oauth_client_id": self._app_data.oauth_client_id,
+            "client_id": self._app_data.client_id,
+            "client_name": self._app_data.client_name,
+            "client_redirect_uris": self._app_data.client_redirect_uris,
             "oauth_access_token": self._app_data.oauth_access_token,
             "oauth_refresh_token": self._app_data.oauth_refresh_token,
             "registration_access_token": self._app_data.registration_access_token,
@@ -126,8 +135,12 @@ class AppDataStore:
             "registration_client_payload": self._app_data.registration_client_payload,
         }
 
-        if oauth_client_id is not _UNSET:
-            payload["oauth_client_id"] = oauth_client_id
+        if client_id is not _UNSET:
+            payload["client_id"] = client_id
+        if client_name is not _UNSET:
+            payload["client_name"] = client_name
+        if client_redirect_uris is not _UNSET:
+            payload["client_redirect_uris"] = client_redirect_uris
         if oauth_access_token is not _UNSET:
             payload["oauth_access_token"] = oauth_access_token
         if oauth_refresh_token is not _UNSET:
@@ -139,7 +152,7 @@ class AppDataStore:
         if registration_client_payload is not _UNSET:
             payload["registration_client_payload"] = registration_client_payload
 
-        self._app_data = AppData(**payload)
+        self._app_data = ClientAppData(**payload)
         self.save()
 
     def delete(self) -> None:
@@ -147,7 +160,7 @@ class AppDataStore:
             return
 
         self._session_file_path.unlink(missing_ok=True)
-        self._app_data = AppData()
+        self._app_data = ClientAppData()
 
 
 @dataclass(frozen=True)
@@ -163,10 +176,10 @@ class UserAuthState:
 
 
 @dataclass(frozen=True)
-class AppAuthState:
-    """Immutable snapshot of registered client credentials and tokens."""
-
+class ClientAppState:
     client_id: Optional[str]
+    client_name: Optional[str]
+    client_redirect_uris: Optional[List[str]]
     access_token: Optional[str]
     refresh_token: Optional[str]
     registration_access_token: Optional[str]
