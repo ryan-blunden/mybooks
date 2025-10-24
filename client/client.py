@@ -89,14 +89,14 @@ truststore.inject_into_ssl()
 
 def get_oauth_metadata(server_url: str, unauthorized_response: httpx.Response | None = None):
     metadata: oauth.OAuthMetadata | None = None
-    header_url: str | None = None
+    metadata_resource_url: str | None = None
 
     if unauthorized_response is not None:
         header_value = unauthorized_response.headers.get("WWW-Authenticate")
-        header_url = oauth.extract_resource_metadata_url(header_value)
-        if header_url:
+        metadata_resource_url = oauth.extract_resource_metadata_url(header_value)
+        if metadata_resource_url:
             try:
-                metadata = oauth.get_oauth_metadata_from_resource_url(header_url)
+                metadata = oauth.get_oauth_metadata_from_resource_url(metadata_resource_url)
             except oauth.OAuthDiscoveryError:
                 metadata = None
 
@@ -104,7 +104,7 @@ def get_oauth_metadata(server_url: str, unauthorized_response: httpx.Response | 
         metadata = oauth.get_oauth_metadata(server_url)
 
     if metadata is None:
-        hint = f" (tried resource metadata: {header_url})" if header_url else ""
+        hint = f" (tried resource metadata: {metadata_resource_url})" if metadata_resource_url else ""
         raise oauth.OAuthDiscoveryError(f"Unable to discover OAuth metadata for {server_url}{hint}.")
 
     return metadata
@@ -462,8 +462,6 @@ def init() -> None:
         app_data_store: ClientAppDataStore = ClientAppDataStore(cookies=cookies)
         st.session_state.app_data_store = app_data_store
 
-    app_data_store: ClientAppDataStore = st.session_state.app_data_store
-
     if st.session_state.get("oauth_metadata") is None:
         st.session_state.oauth_metadata = None
 
@@ -481,10 +479,10 @@ def init() -> None:
     st.title("MCP OAuth Playground")
     st.text("Uses OAuth protected resource and auth server discovery, Dynamic Client Registration, and PKCE authorization code flow.")
 
-    client_state = app_data_store.app_data.client
+    client_state = st.session_state.app_data_store.app_data.client
     token = client_state.access_token or ""
     previous_token = st.session_state.get("_mcp_token")
-    # AIDEV-NOTE: Cache MCP server/agent; only rebuild when the OAuth token changes.
+    # Cache MCP server/agent; only rebuild when the OAuth token changes.
     needs_server_refresh = "mcp_server" not in st.session_state or token != previous_token
 
     def ensure_oauth_metadata(response: httpx.Response | None = None, *, force: bool = False) -> None:
@@ -667,16 +665,18 @@ def handle_chat_turn(prompt: str) -> None:
         asyncio.run(run_agent())
 
 
-init()
+def main():
+    init()
+    render_sidebar()
+    render_metadata_authorization()
+    render_chat_history(st.session_state.messages)
 
-render_sidebar()
+    if st.session_state.pop(FORCE_RERUN_KEY, False):
+        st.rerun()
 
-render_metadata_authorization()
+    if prompt := st.chat_input("Ask me something…"):
+        handle_chat_turn(prompt)
 
-render_chat_history(st.session_state.messages)
 
-if st.session_state.pop(FORCE_RERUN_KEY, False):
-    st.rerun()
-
-if prompt := st.chat_input("Ask me something…"):
-    handle_chat_turn(prompt)
+if __name__ == "__main__":
+    main()
