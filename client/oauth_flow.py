@@ -13,8 +13,7 @@ from urllib.parse import urlencode
 import requests
 from oauth import exchange_code_for_tokens, generate_pkce_pair
 
-FLOW_USER_LOGIN = "user_login"
-FLOW_APP_AUTHORIZE = "app_authorize"
+APP_AUTHORIZATION_NAME = "app_authorize"
 
 
 class OAuthFlowError(RuntimeError):
@@ -130,143 +129,83 @@ class OAuthFlowStore:
         self.path.unlink(missing_ok=True)
 
 
-class AuthorizationFlow:
-    """Handle starting and completing a single OAuth authorization-code flow."""
-
-    def __init__(self, name: str) -> None:
-        self.name = name
-        self._store = OAuthFlowStore(name)
-
-    def start(
-        self,
-        *,
-        client_id: str,
-        scope: str,
-        redirect_uri: str,
-        authorization_endpoint: str,
-        reuse_existing: bool = False,
-    ) -> str:
-        state = self._store.load() if reuse_existing else None
-        if state is None:
-            state = OAuthFlowState.new(client_id=client_id, redirect_uri=redirect_uri, scope=scope)
-        else:
-            state = state.with_context(client_id=client_id, redirect_uri=redirect_uri, scope=scope)
-
-        self._store.save(state)
-
-        params = {
-            "response_type": "code",
-            "client_id": state.client_id,
-            "redirect_uri": state.redirect_uri,
-            "scope": state.scope,
-            "state": state.state,
-            "code_challenge": state.code_challenge,
-            "code_challenge_method": state.code_challenge_method,
-        }
-
-        return f"{authorization_endpoint}?{urlencode(params)}"
-
-    def complete(
-        self,
-        *,
-        code: str,
-        returned_state: Optional[str],
-        token_endpoint: str,
-        client_id_override: Optional[str] = None,
-    ) -> Dict[str, Any]:
-        state = self._store.load()
-        if state is None:
-            raise OAuthFlowError("OAuth flow state missing; restart the authorization process.")
-
-        if state.state and returned_state and returned_state != state.state:
-            raise OAuthFlowError("State mismatch detected; restart the authorization process.")
-
-        client_id = client_id_override or state.client_id
-        if not client_id:
-            raise OAuthFlowError("OAuth flow client_id missing; restart the authorization process.")
-
-        tokens = exchange_code_for_tokens(
-            token_endpoint,
-            authorization_code=code,
-            client_id=client_id,
-            redirect_uri=state.redirect_uri,
-            code_verifier=state.code_verifier,
-        )
-
-        self.clear()
-        return tokens
-
-    def clear(self) -> None:
-        self._store.clear()
-
-    def matches_state(self, state_value: str) -> bool:
-        state = self._store.load()
-        return bool(state and state.state == state_value)
+_APP_FLOW_STORE = OAuthFlowStore(APP_AUTHORIZATION_NAME)
 
 
-USER_AUTH_FLOW = AuthorizationFlow(FLOW_USER_LOGIN)
-APP_AUTH_FLOW = AuthorizationFlow(FLOW_APP_AUTHORIZE)
-_ALL_FLOWS = (USER_AUTH_FLOW, APP_AUTH_FLOW)
-
-
-def get_flow(name: str) -> AuthorizationFlow:
-    if name == FLOW_USER_LOGIN:
-        return USER_AUTH_FLOW
-    if name == FLOW_APP_AUTHORIZE:
-        return APP_AUTH_FLOW
-    return AuthorizationFlow(name)
-
-
-def start_authorization_flow(
+def start_authorization(
     *,
-    name: str,
     client_id: str,
     scope: str,
     redirect_uri: str,
     authorization_endpoint: str,
     reuse_existing: bool = False,
 ) -> str:
-    flow = get_flow(name)
-    return flow.start(
-        client_id=client_id,
-        scope=scope,
-        redirect_uri=redirect_uri,
-        authorization_endpoint=authorization_endpoint,
-        reuse_existing=reuse_existing,
-    )
+    """Start the single supported OAuth authorization-code flow."""
+
+    state = _APP_FLOW_STORE.load() if reuse_existing else None
+    if state is None:
+        state = OAuthFlowState.new(client_id=client_id, redirect_uri=redirect_uri, scope=scope)
+    else:
+        state = state.with_context(client_id=client_id, redirect_uri=redirect_uri, scope=scope)
+
+    _APP_FLOW_STORE.save(state)
+
+    params = {
+        "response_type": "code",
+        "client_id": state.client_id,
+        "redirect_uri": state.redirect_uri,
+        "scope": state.scope,
+        "state": state.state,
+        "code_challenge": state.code_challenge,
+        "code_challenge_method": state.code_challenge_method,
+    }
+
+    return f"{authorization_endpoint}?{urlencode(params)}"
 
 
-def handle_authorization_callback(
+def complete_authorization(
     *,
-    name: str,
     code: str,
     returned_state: Optional[str],
     token_endpoint: str,
     client_id_override: Optional[str] = None,
 ) -> Dict[str, Any]:
-    flow = get_flow(name)
-    return flow.complete(
-        code=code,
-        returned_state=returned_state,
-        token_endpoint=token_endpoint,
-        client_id_override=client_id_override,
+    """Complete the active authorization flow and exchange the code for tokens."""
+
+    state = _APP_FLOW_STORE.load()
+    if state is None:
+        raise OAuthFlowError("OAuth flow state missing; restart the authorization process.")
+
+    if state.state and returned_state and returned_state != state.state:
+        raise OAuthFlowError("State mismatch detected; restart the authorization process.")
+
+    client_id = client_id_override or state.client_id
+    if not client_id:
+        raise OAuthFlowError("OAuth flow client_id missing; restart the authorization process.")
+
+    tokens = exchange_code_for_tokens(
+        token_endpoint,
+        authorization_code=code,
+        client_id=client_id,
+        redirect_uri=state.redirect_uri,
+        code_verifier=state.code_verifier,
     )
 
-
-def find_flow_by_state(state: str) -> Optional[str]:
-    for flow in _ALL_FLOWS:
-        if flow.matches_state(state):
-            return flow.name
-    return None
+    clear_authorization_state()
+    return tokens
 
 
-def clear_flow(name: str) -> None:
-    get_flow(name).clear()
+def authorization_state_matches(state_value: str) -> bool:
+    """Return True when the persisted authorization state matches ``state_value``."""
+
+    state = _APP_FLOW_STORE.load()
+    return bool(state and state.state == state_value)
 
 
-def clear_all_flows() -> None:
-    for flow in _ALL_FLOWS:
-        flow.clear()
+def clear_authorization_state() -> None:
+    """Remove any persisted authorization flow state."""
+
+    _APP_FLOW_STORE.clear()
 
 
 def register_dynamic_client(
