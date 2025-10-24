@@ -4,16 +4,16 @@ import json
 import os
 import time
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Dict, List, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 import httpx
+import oauth
 import oauth_flow
 import requests
 import streamlit as st
 import truststore
 from app_data_store import ClientAppData, ClientAppDataStore
 from dotenv import load_dotenv
-from oauth import OAuthDiscoveryError, OAuthMetadata, discover_oauth_metadata
 from pydantic_ai import Agent
 from pydantic_ai.mcp import MCPServerStreamableHTTP
 from pydantic_ai.messages import (
@@ -55,16 +55,6 @@ REDIRECT_URI = CLIENT_URL
 OAUTH_SCOPES = "read write"
 OAUTH_USER_AUTH_CLIENT_ID = os.environ.get("OAUTH_USER_AUTH_CLIENT_ID")
 
-truststore.inject_into_ssl()
-
-try:
-    OAUTH_METADATA: OAuthMetadata = discover_oauth_metadata(MCP_SERVER_URL)
-except OAuthDiscoveryError as e:
-    OAUTH_METADATA = None
-    st.error(str(e))
-    st.stop()
-
-
 CLIENT_DCR_REQUIRES_AUTH = strtobool(os.environ.get("CLIENT_DCR_REQUIRES_AUTH", "false"))
 SYSTEM_PROMPT = os.environ.get("SYSTEM_PROMPT", "You are a helpful assistant. Use tools if needed.")
 MODEL_NAME = os.environ["OPENAI_MODEL"]
@@ -92,6 +82,46 @@ MODEL_RESPONSE_SPINNER = """
   </div>
 </div>
 """
+
+
+truststore.inject_into_ssl()
+
+
+def get_oauth_metadata(server_url: str, unauthorized_response: httpx.Response | None = None):
+    metadata: oauth.OAuthMetadata | None = None
+    metadata_resource_url: str | None = None
+
+    if unauthorized_response is not None:
+        header_value = unauthorized_response.headers.get("WWW-Authenticate")
+        metadata_resource_url = oauth.extract_resource_metadata_url(header_value)
+        if metadata_resource_url:
+            try:
+                metadata = oauth.get_oauth_metadata_from_resource_url(metadata_resource_url)
+            except oauth.OAuthDiscoveryError:
+                metadata = None
+
+    if metadata is None:
+        metadata = oauth.get_oauth_metadata(server_url)
+
+    if metadata is None:
+        hint = f" (tried resource metadata: {metadata_resource_url})" if metadata_resource_url else ""
+        raise oauth.OAuthDiscoveryError(f"Unable to discover OAuth metadata for {server_url}{hint}.")
+
+    return metadata
+
+
+async def list_tools(server: MCPServerStreamableHTTP) -> Tuple[List[Any], Optional[httpx.Response]]:
+    try:
+        tools = await server.list_tools()
+    except httpx.HTTPStatusError as exc:
+        return [], exc.response
+    except ExceptionGroup as exc:
+        for inner in flatten_exceptions(exc):
+            if isinstance(inner, httpx.HTTPStatusError):
+                return [], inner.response
+        raise
+
+    return tools, None
 
 
 def set_oauth_notice(level: str, message: str) -> None:
@@ -133,7 +163,7 @@ def trigger_browser_redirect(url: str) -> None:
         f'<meta http-equiv="refresh" content="0; url={safe_url}">',
         unsafe_allow_html=True,
     )
-    # st.stop()
+    st.stop()
 
 
 def process_oauth_callback() -> None:
@@ -143,6 +173,8 @@ def process_oauth_callback() -> None:
     if not params:
         return
 
+    oauth_metadata = get_oauth_metadata(MCP_SERVER_URL)
+
     code = first_query_value(params.get("code"))
     if not code:
         return
@@ -151,22 +183,20 @@ def process_oauth_callback() -> None:
     if not returned_state:
         set_oauth_notice("error", "OAuth callback missing state; restart the flow.")
         st.query_params.clear()
-        oauth_flow.clear_all_flows()
+        oauth_flow.clear_authorization_state()
         st.rerun()
 
-    pending_flow = oauth_flow.find_flow_by_state(returned_state)
-    if not pending_flow:
+    if not oauth_flow.authorization_state_matches(returned_state):
         set_oauth_notice("error", "Received OAuth callback without an active flow. Start over.")
         st.query_params.clear()
-        oauth_flow.clear_all_flows()
+        oauth_flow.clear_authorization_state()
         st.rerun()
 
     try:
-        tokens = oauth_flow.handle_authorization_callback(
-            name=pending_flow,
+        tokens = oauth_flow.complete_authorization(
             code=code,
             returned_state=returned_state,
-            token_endpoint=OAUTH_METADATA.auth_server_metadata.token_endpoint,
+            token_endpoint=oauth_metadata.auth_server_metadata.token_endpoint,
         )
     except oauth_flow.OAuthFlowError as exc:
         set_oauth_notice("error", str(exc))
@@ -185,14 +215,11 @@ def process_oauth_callback() -> None:
         st.query_params.clear()
         st.rerun()
 
-    if pending_flow == oauth_flow.FLOW_APP_AUTHORIZE:
-        st.session_state.app_data_store.update(
-            oauth_access_token=access_token,
-            oauth_refresh_token=refresh_token,
-        )
-        set_oauth_notice("success", "Authorization completed successfully.")
-    else:
-        set_oauth_notice("warning", "OAuth callback handled but flow type was unrecognized.")
+    st.session_state.app_data_store.update(
+        access_token=access_token,
+        refresh_token=refresh_token,
+    )
+    set_oauth_notice("success", "Authorization completed successfully.")
 
     st.query_params.clear()
     st.rerun()
@@ -202,8 +229,8 @@ def reset_client_authorization(*, clear_registration: bool = False) -> None:
     """Clear stored authorization tokens (and optionally registration metadata)."""
 
     update_kwargs: Dict[str, Any] = {
-        "oauth_access_token": None,
-        "oauth_refresh_token": None,
+        "access_token": None,
+        "refresh_token": None,
     }
     if clear_registration:
         update_kwargs.update(
@@ -211,7 +238,6 @@ def reset_client_authorization(*, clear_registration: bool = False) -> None:
                 "client_id": None,
                 "client_name": None,
                 "client_redirect_uris": None,
-                "registration_client_uri": None,
                 "registration_client_payload": None,
             }
         )
@@ -225,36 +251,41 @@ def reset_client_authorization(*, clear_registration: bool = False) -> None:
     else:
         set_oauth_notice("info", "Cleared stored authorization tokens. Re-authorize the client when ready.")
 
-    oauth_flow.clear_all_flows()
+    oauth_flow.clear_authorization_state()
     schedule_rerun()
 
 
-def render_connection_setup() -> None:
-    """Render the guided OAuth setup flow for the client."""
+def render_metadata_authorization() -> None:
 
     consume_oauth_notice()
 
     client = st.session_state.app_data_store.app_data.client
-
+    oauth_metadata = st.session_state.oauth_metadata
+    if oauth_metadata is None:
+        st.info("OAuth discovery failed. Check server URL and refresh to retry discovery.")
+        return
     client_registered = client.is_registered
     client_authorized = client.is_authorized
 
     with st.expander("Metadata Discovery", expanded=client.client_id is None):
         st.markdown("##### OAuth 2.0 Protected Resource Metadata")
-        st.text(f"Discovered URL: {OAUTH_METADATA.protected_metadata_url}\n")
-        protected_payload = json.dumps(OAUTH_METADATA.protected_metadata.to_dict(), indent=2) if OAUTH_METADATA.protected_metadata else "{}"
+        st.text(f"Discovered URL: {oauth_metadata.protected_metadata_url}\n")
+        protected_payload = json.dumps(oauth_metadata.protected_metadata.to_dict(), indent=2) if oauth_metadata.protected_metadata else "{}"
         st.code(protected_payload, language="json")
 
         st.markdown("##### OAuth 2.0 Authorization Server Metadata")
-        st.text(f"Discovered URL: {OAUTH_METADATA.auth_server_metadata_url}\n")
-        st.code(json.dumps(OAUTH_METADATA.auth_server_metadata.to_dict(), indent=2), language="json")
+        st.text(f"Discovered URL: {oauth_metadata.auth_server_metadata_url}\n")
+        st.code(json.dumps(oauth_metadata.auth_server_metadata.to_dict(), indent=2), language="json")
 
     with st.expander("Registration and Authorization", expanded=client.access_token is None):
         st.markdown("##### Dynamic Client Registration")
         st.text("Register a new client application")
 
+        registration_endpoint = oauth_metadata.auth_server_metadata.registration_endpoint
         if client_registered:
             st.success(f"Client ID: {client.client_id}.")
+        elif not registration_endpoint:
+            st.error("Authorization server does not support Dynamic Client Registration.")
         else:
             client_name = st.session_state.get("pending_client_name")
             if not isinstance(client_name, str):
@@ -275,7 +306,7 @@ def render_connection_setup() -> None:
             def register_client(client_name: str) -> None:
                 try:
                     client_data = oauth_flow.register_dynamic_client(
-                        registration_endpoint=OAUTH_METADATA.auth_server_metadata.registration_endpoint,
+                        registration_endpoint=registration_endpoint,
                         client_name=client_name,
                         redirect_uri=REDIRECT_URI,
                         scope=OAUTH_SCOPES,
@@ -308,7 +339,6 @@ def render_connection_setup() -> None:
                     client_id=client_id,
                     client_name=client_name,
                     client_redirect_uris=client_redirect_uris,
-                    registration_client_uri=client_data.get("registration_client_uri"),
                     registration_client_payload=client_data,
                 )
 
@@ -331,12 +361,11 @@ def render_connection_setup() -> None:
                 use_container_width=True,
             )
         else:
-            authorize_url = oauth_flow.start_authorization_flow(
-                name=oauth_flow.FLOW_APP_AUTHORIZE,
+            authorize_url = oauth_flow.start_authorization(
                 client_id=client.client_id,
                 scope=OAUTH_SCOPES,
                 redirect_uri=REDIRECT_URI,
-                authorization_endpoint=OAUTH_METADATA.auth_server_metadata.authorization_endpoint,
+                authorization_endpoint=oauth_metadata.auth_server_metadata.authorization_endpoint,
                 reuse_existing=True,
             )
             if st.button("Authorize", use_container_width=True):
@@ -431,40 +460,84 @@ def extract_tool_activity(messages: List[ModelMessage]) -> tuple[List[str], bool
 
 
 def init() -> None:
-    st.set_page_config(page_title="MCP OAuth Playground", layout="wide", page_icon=Path("../mybooks/static/mybooks/img/favicon.png"))
-    st.title("MCP OAuth Playground")
-    st.text("Uses OAuth protected resource and auth server discovery, Dynamic Client Registration, and PKCE authorization code flow.")
     cookies = StreamlitCookieController()
-
     while len(cookies.getAll()) == 0:
         time.sleep(1)
 
-    app_data_store: ClientAppDataStore = ClientAppDataStore(cookies=cookies)
-    st.session_state.app_data_store = app_data_store
+    if not st.session_state.get("app_data_store"):
+        app_data_store: ClientAppDataStore = ClientAppDataStore(cookies=cookies)
+        st.session_state.app_data_store = app_data_store
 
-    headers: Dict[str, str] = {}
-    client = app_data_store.app_data.client
-    token = client.access_token or ""
-    mcp_server: Optional[MCPServerStreamableHTTP] = None
-    if token:
-        headers["Authorization"] = f"Bearer {token}"
-        mcp_server = MCPServerStreamableHTTP(url=MCP_SERVER_URL, headers=headers)
-        st.session_state.mcp_server = mcp_server
+    if st.session_state.get("oauth_metadata") is None:
+        st.session_state.oauth_metadata = None
 
-    if mcp_server is None:
-        agent = Agent(
-            model=MODEL_NAME,
-            system_prompt=SYSTEM_PROMPT,
+    if st.query_params:
+        process_oauth_callback()
+
+    if not st.session_state.get("_page_configured"):
+        st.set_page_config(
+            page_title="MCP OAuth Playground",
+            layout="wide",
+            page_icon=Path("../mybooks/static/mybooks/img/favicon.png"),
         )
+        st.session_state._page_configured = True
+
+    st.title("MCP OAuth Playground")
+    st.text("Uses OAuth protected resource and auth server discovery, Dynamic Client Registration, and PKCE authorization code flow.")
+
+    client_state = st.session_state.app_data_store.app_data.client
+    token = client_state.access_token or ""
+    previous_token = st.session_state.get("_mcp_token")
+    # Cache MCP server/agent; only rebuild when the OAuth token changes.
+    needs_server_refresh = "mcp_server" not in st.session_state or token != previous_token
+
+    def ensure_oauth_metadata(response: httpx.Response | None = None, *, force: bool = False) -> None:
+        if st.session_state.oauth_metadata is not None and not force:
+            return
+        st.session_state.oauth_metadata = get_oauth_metadata(server_url=MCP_SERVER_URL, unauthorized_response=response)
+
+    if needs_server_refresh:
+        headers: Dict[str, str] = {}
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+
+        with st.spinner("Initializing MCP Server"):
+            mcp_server = MCPServerStreamableHTTP(url=MCP_SERVER_URL, headers=headers)
+            st.session_state.mcp_server = mcp_server
+            st.session_state._mcp_token = token
+
+            try:
+                tools, response = asyncio.run(list_tools(mcp_server))
+            except (oauth.OAuthDiscoveryError, ExceptionGroup) as exc:
+                st.session_state.tools_error = truncate(str(exc), 120)
+                st.session_state.tools = []
+                ensure_oauth_metadata(None)
+            else:
+                if response is not None and response.status_code == 401:
+                    st.session_state.tools = []
+                    st.session_state.tools_error = "Cannot list tools without authorization."
+                    ensure_oauth_metadata(response, force=True)
+                else:
+                    st.session_state.tools_error = None
+                    st.session_state.tools = [tool.name for tool in tools]
+                    ensure_oauth_metadata(None)
+
+            st.session_state.agent = Agent(
+                model=MODEL_NAME,
+                toolsets=[mcp_server],
+                system_prompt=SYSTEM_PROMPT,
+            )
+
     else:
-        agent = Agent(
-            model=MODEL_NAME,
-            toolsets=[mcp_server],
-            system_prompt=SYSTEM_PROMPT,
-        )
-    st.session_state.agent = agent
+        if not st.session_state.get("agent"):
+            st.session_state.agent = Agent(
+                model=MODEL_NAME,
+                toolsets=[st.session_state.mcp_server],
+                system_prompt=SYSTEM_PROMPT,
+            )
+        ensure_oauth_metadata(None)
 
-    if "messages" not in st.session_state:
+    if not st.session_state.get("messages"):
         st.session_state.messages = []
 
 
@@ -488,28 +561,20 @@ def render_sidebar() -> None:
         st.write({"prompt": SYSTEM_PROMPT, "model": MODEL_NAME})
 
         st.divider()
-        st.subheader("MCP Config")
-        mcp_server = st.session_state.get("mcp_server")
-        tools: List[str] = []
-        tools_error = None
-        if mcp_server is not None:
-            with st.spinner("Loading MCP tools list…"):
-                try:
-                    tools = asyncio.run(st.session_state.mcp_server.list_tools())
-                except Exception as exc:  # pragma: no cover - Streamlit UI path
-                    tools_error = truncate(str(exc), 120)
-                else:
-                    tools = [tool.name for tool in tools]
-                    tools_error = None
+        st.subheader("MCP Server")
+        with st.spinner("Loading MCP tools list…"):
+            mcp_server = st.session_state.mcp_server
+            tools_error = st.session_state.tools_error
+            tools: Any = st.session_state.tools
 
-        tools_display: Any = f"Error: {tools_error}" if tools_error else tools
-        client = app_data.client
-        st.write(
-            {
-                "url": MCP_SERVER_URL,
-                "tools": tools_display,
-            }
-        )
+            tools_display: Any = tools_error if tools_error else tools
+            client = app_data.client
+            st.write(
+                {
+                    "url": mcp_server.url,
+                    "tools": tools_display,
+                }
+            )
 
         if client.client_id:
             st.divider()
@@ -606,18 +671,18 @@ def handle_chat_turn(prompt: str) -> None:
         asyncio.run(run_agent())
 
 
-init()
+def main():
+    init()
+    render_sidebar()
+    render_metadata_authorization()
+    render_chat_history(st.session_state.messages)
 
-process_oauth_callback()
+    if st.session_state.pop(FORCE_RERUN_KEY, False):
+        st.rerun()
 
-render_sidebar()
+    if prompt := st.chat_input("Ask me something…"):
+        handle_chat_turn(prompt)
 
-render_connection_setup()
 
-render_chat_history(st.session_state.messages)
-
-if st.session_state.pop(FORCE_RERUN_KEY, False):
-    st.rerun()
-
-if prompt := st.chat_input("Ask me something…"):
-    handle_chat_turn(prompt)
+if __name__ == "__main__":
+    main()

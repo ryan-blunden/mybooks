@@ -23,9 +23,8 @@ class ClientAppData:
     client_id: Optional[str] = None
     client_name: Optional[str] = None
     client_redirect_uris: Optional[List[str]] = None
-    oauth_access_token: Optional[str] = None
-    oauth_refresh_token: Optional[str] = None
-    registration_client_uri: Optional[str] = None
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
     registration_client_payload: Optional[Dict[str, Any]] = None
 
     @classmethod
@@ -34,9 +33,8 @@ class ClientAppData:
             "client_id": payload.get("client_id"),
             "client_name": payload.get("client_name"),
             "client_redirect_uris": payload.get("client_redirect_uris"),
-            "oauth_access_token": payload.get("oauth_access_token"),
-            "oauth_refresh_token": payload.get("oauth_refresh_token"),
-            "registration_client_uri": payload.get("registration_client_uri"),
+            "access_token": payload.get("access_token"),
+            "refresh_token": payload.get("refresh_token"),
         }
         registration_payload = payload.get("registration_client_payload")
         if isinstance(registration_payload, dict):
@@ -54,9 +52,8 @@ class ClientAppData:
             client_id=self.client_id,
             client_name=self.client_name,
             client_redirect_uris=self.client_redirect_uris,
-            access_token=self.oauth_access_token,
-            refresh_token=self.oauth_refresh_token,
-            registration_client_uri=self.registration_client_uri,
+            access_token=self.access_token,
+            refresh_token=self.refresh_token,
         )
 
 
@@ -112,9 +109,8 @@ class ClientAppDataStore:
         client_id: Optional[str] | object = _UNSET,
         client_name: Optional[str] | object = _UNSET,
         client_redirect_uris: Optional[List[str]] | object = _UNSET,
-        oauth_access_token: Optional[str] | object = _UNSET,
-        oauth_refresh_token: Optional[str] | object = _UNSET,
-        registration_client_uri: Optional[str] | object = _UNSET,
+        access_token: Optional[str] | object = _UNSET,
+        refresh_token: Optional[str] | object = _UNSET,
         registration_client_payload: Optional[Dict[str, Any]] | object = _UNSET,
     ) -> ClientAppData:
 
@@ -122,9 +118,8 @@ class ClientAppDataStore:
             "client_id": self._app_data.client_id,
             "client_name": self._app_data.client_name,
             "client_redirect_uris": self._app_data.client_redirect_uris,
-            "oauth_access_token": self._app_data.oauth_access_token,
-            "oauth_refresh_token": self._app_data.oauth_refresh_token,
-            "registration_client_uri": self._app_data.registration_client_uri,
+            "access_token": self._app_data.access_token,
+            "refresh_token": self._app_data.refresh_token,
             "registration_client_payload": self._app_data.registration_client_payload,
         }
 
@@ -134,12 +129,10 @@ class ClientAppDataStore:
             payload["client_name"] = client_name
         if client_redirect_uris is not _UNSET:
             payload["client_redirect_uris"] = client_redirect_uris
-        if oauth_access_token is not _UNSET:
-            payload["oauth_access_token"] = oauth_access_token
-        if oauth_refresh_token is not _UNSET:
-            payload["oauth_refresh_token"] = oauth_refresh_token
-        if registration_client_uri is not _UNSET:
-            payload["registration_client_uri"] = registration_client_uri
+        if access_token is not _UNSET:
+            payload["access_token"] = access_token
+        if refresh_token is not _UNSET:
+            payload["refresh_token"] = refresh_token
         if registration_client_payload is not _UNSET:
             payload["registration_client_payload"] = registration_client_payload
 
@@ -173,7 +166,6 @@ class ClientAppState:
     client_redirect_uris: Optional[List[str]]
     access_token: Optional[str]
     refresh_token: Optional[str]
-    registration_client_uri: Optional[str]
 
     @property
     def is_registered(self) -> bool:
