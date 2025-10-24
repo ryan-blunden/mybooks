@@ -119,7 +119,7 @@ async def list_tools(server: MCPServerStreamableHTTP) -> Tuple[List[Any], Option
         for inner in flatten_exceptions(exc):
             if isinstance(inner, httpx.HTTPStatusError):
                 return [], inner.response
-        raise exc
+        raise
 
     return tools, None
 
@@ -163,7 +163,7 @@ def trigger_browser_redirect(url: str) -> None:
         f'<meta http-equiv="refresh" content="0; url={safe_url}">',
         unsafe_allow_html=True,
     )
-    # st.stop()
+    st.stop()
 
 
 def process_oauth_callback() -> None:
@@ -261,6 +261,9 @@ def render_metadata_authorization() -> None:
 
     client = st.session_state.app_data_store.app_data.client
     oauth_metadata = st.session_state.oauth_metadata
+    if oauth_metadata is None:
+        st.info("OAuth discovery failed. Check server URL and refresh to retry discovery.")
+        return
     client_registered = client.is_registered
     client_authorized = client.is_authorized
 
@@ -278,8 +281,11 @@ def render_metadata_authorization() -> None:
         st.markdown("##### Dynamic Client Registration")
         st.text("Register a new client application")
 
+        registration_endpoint = oauth_metadata.auth_server_metadata.registration_endpoint
         if client_registered:
             st.success(f"Client ID: {client.client_id}.")
+        elif not registration_endpoint:
+            st.error("Authorization server does not support Dynamic Client Registration.")
         else:
             client_name = st.session_state.get("pending_client_name")
             if not isinstance(client_name, str):
@@ -300,7 +306,7 @@ def render_metadata_authorization() -> None:
             def register_client(client_name: str) -> None:
                 try:
                     client_data = oauth_flow.register_dynamic_client(
-                        registration_endpoint=oauth_metadata.auth_server_metadata.registration_endpoint,
+                        registration_endpoint=registration_endpoint,
                         client_name=client_name,
                         redirect_uri=REDIRECT_URI,
                         scope=OAUTH_SCOPES,
@@ -495,7 +501,7 @@ def init() -> None:
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        with st.spinner(f"Initializing MCP Server {MCP_SERVER_URL}"):
+        with st.spinner("Initializing MCP Server"):
             mcp_server = MCPServerStreamableHTTP(url=MCP_SERVER_URL, headers=headers)
             st.session_state.mcp_server = mcp_server
             st.session_state._mcp_token = token

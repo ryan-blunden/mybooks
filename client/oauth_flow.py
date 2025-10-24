@@ -174,14 +174,14 @@ def complete_authorization(
 
     state = _APP_FLOW_STORE.load()
     if state is None:
-        raise OAuthFlowError("OAuth flow state missing; restart the authorization process.")
+        raise OAuthFlowError("OAuth flow state missing.")
 
     if state.state and returned_state and returned_state != state.state:
-        raise OAuthFlowError("State mismatch detected; restart the authorization process.")
+        raise OAuthFlowError("State mismatch detected.")
 
     client_id = client_id_override or state.client_id
     if not client_id:
-        raise OAuthFlowError("OAuth flow client_id missing; restart the authorization process.")
+        raise OAuthFlowError("OAuth flow client_id missing.")
 
     tokens = exchange_code_for_tokens(
         token_endpoint,
