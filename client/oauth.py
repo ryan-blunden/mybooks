@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import asdict, dataclass, is_dataclass
-from functools import lru_cache
 from typing import Any, Callable, Dict, Iterable, Mapping, MutableMapping, Optional, Tuple, TypeVar
 from urllib.parse import urlparse
 
@@ -15,6 +15,14 @@ _DEFAULT_TIMEOUT_SECONDS = 10
 
 
 T = TypeVar("T")
+
+_RESOURCE_METADATA_RE = re.compile(
+    r"resource_metadata=(?:\"(?P<quoted>[^\"]+)\"|(?P<token>[^,\s]+))",
+    re.IGNORECASE,
+)
+
+# Cache of discovered OAuth metadata
+OAUTH_METADATA: Optional["OAuthMetadata"] = None
 
 
 class OAuthDiscoveryError(RuntimeError):
@@ -121,6 +129,20 @@ def _fetch_json_document(url: str) -> Mapping[str, Any] | None:
     return data
 
 
+def extract_resource_metadata_url(www_authenticate: str | None) -> str | None:
+    """Return the resource metadata URL embedded in a WWW-Authenticate header."""
+
+    if not www_authenticate:
+        return None
+
+    match = _RESOURCE_METADATA_RE.search(www_authenticate)
+    if not match:
+        return None
+
+    value = match.group("quoted") or match.group("token")
+    return value.strip() if value else None
+
+
 def _discover_from_urls(urls: Iterable[str], parser: Callable[[Mapping[str, Any]], T]) -> Tuple[str, T] | None:
     seen: set[str] = set()
     for url in urls:
@@ -189,86 +211,87 @@ def _build_well_known_urls(*, scheme: str, host: str, resource: str, path: str |
     return tuple(urls)
 
 
-def _auth_server_hint_urls(authorization_servers: Tuple[str, ...]) -> Tuple[str, ...]:
+def _discover_protected_metadata(url: str) -> Tuple[str, OAuthProtectedMetadata] | None:
     urls: list[str] = []
-    seen: set[str] = set()
+    parsed = urlparse(url)
+    urls.extend(_build_well_known_urls(scheme=parsed.scheme, host=parsed.netloc, resource="oauth-protected-resource", path=parsed.path))
 
-    for server in authorization_servers:
-        candidate = server.strip()
-        if not candidate:
-            continue
-
-        if candidate not in seen:
-            seen.add(candidate)
-            urls.append(candidate)
-
-        parsed = urlparse(candidate)
-        if not parsed.scheme or not parsed.netloc:
-            continue
-
-        base = candidate.rstrip("/")
-        oauth_url = f"{base}/.well-known/oauth-authorization-server"
-        openid_url = f"{base}/.well-known/openid-configuration"
-
-        for url in (oauth_url, openid_url):
-            if url not in seen:
-                seen.add(url)
-                urls.append(url)
-
-    return tuple(urls)
-
-
-def _discover_protected_metadata(*, scheme: str, host: str, path: str | None) -> Tuple[str, OAuthProtectedMetadata] | None:
-    urls = _build_well_known_urls(scheme=scheme, host=host, resource="oauth-protected-resource", path=path)
     return _discover_from_urls(urls, _parse_protected_metadata)
 
 
-def _discover_auth_server_metadata(
-    *,
-    scheme: str,
-    host: str,
-    path: str | None,
-    authorization_servers: Tuple[str, ...] | None,
-) -> Tuple[str, OAuthServerMetadata] | None:
+def _discover_auth_server_metadata(url: str) -> Tuple[str, OAuthServerMetadata] | None:
     urls: list[str] = []
-    if authorization_servers:
-        urls.extend(_auth_server_hint_urls(authorization_servers))
-
-    urls.extend(_build_well_known_urls(scheme=scheme, host=host, resource="oauth-authorization-server", path=path))
-    urls.extend(_build_well_known_urls(scheme=scheme, host=host, resource="openid-configuration", path=path))
+    parsed = urlparse(url)
+    urls.extend(_build_well_known_urls(scheme=parsed.scheme, host=parsed.netloc, resource="oauth-authorization-server", path=parsed.path))
+    urls.extend(_build_well_known_urls(scheme=parsed.scheme, host=parsed.netloc, resource="openid-configuration", path=parsed.path))
 
     return _discover_from_urls(urls, _parse_server_metadata)
 
 
-@lru_cache(maxsize=1)
-def discover_oauth_metadata(mcp_server_url: str) -> OAuthMetadata | None:
-    parsed = urlparse(mcp_server_url)
-    scheme = parsed.scheme
-    host = parsed.netloc
-    path = parsed.path.lstrip("/") if parsed.path else ""
+def get_oauth_metadata_from_resource_url(resource_metadata_url: str) -> OAuthMetadata | None:
+    global OAUTH_METADATA
 
-    protected_result = _discover_protected_metadata(scheme=scheme, host=host, path=path)
-    authorization_servers = protected_result[1].authorization_servers if protected_result else None
+    if OAUTH_METADATA is not None:
+        return OAUTH_METADATA
 
-    auth_server_result = _discover_auth_server_metadata(
-        scheme=scheme,
-        host=host,
-        path=path,
-        authorization_servers=authorization_servers,
+    document = _fetch_json_document(resource_metadata_url)
+    if document is None:
+        return None
+
+    protected_metadata = _parse_protected_metadata(document)
+
+    auth_server_result = _discover_auth_server_metadata(protected_metadata.authorization_servers[0])
+
+    if auth_server_result is None:
+        raise OAuthDiscoveryError("OAuth authorization server metadata could not be resolved from protected metadata hints.")
+
+    auth_url, auth_metadata = auth_server_result
+
+    oauth_metadata = OAuthMetadata(
+        auth_server_metadata=auth_metadata,
+        auth_server_metadata_url=auth_url,
+        protected_metadata=protected_metadata,
+        protected_metadata_url=resource_metadata_url,
     )
 
+    OAUTH_METADATA = oauth_metadata
+
+    return oauth_metadata
+
+
+def get_oauth_metadata(mcp_server_url: str) -> OAuthMetadata | None:
+    global OAUTH_METADATA
+
+    if OAUTH_METADATA is not None:
+        return OAUTH_METADATA
+
+    protected_result = _discover_protected_metadata(mcp_server_url)
+    if protected_result is None:
+        return None
+
+    protected_url, protected_metadata = protected_result
+
+    authorization_servers = protected_metadata.authorization_servers
+    authorization_server = authorization_servers[0] if authorization_servers else None
+    if not authorization_server:
+        return None
+
+    auth_server_result = _discover_auth_server_metadata(authorization_server)
     if auth_server_result is None:
         return None
 
-    protected_url, protected_metadata = protected_result if protected_result else (None, None)
-    auth_url, auth_metadata = auth_server_result
+    auth_url, auth_server_metadata = auth_server_result
 
-    return OAuthMetadata(
-        auth_server_metadata=auth_metadata,
+    oauth_metadata = OAuthMetadata(
+        auth_server_metadata=auth_server_metadata,
         protected_metadata=protected_metadata,
         protected_metadata_url=protected_url,
         auth_server_metadata_url=auth_url,
     )
+
+    OAUTH_METADATA = oauth_metadata
+
+    return oauth_metadata
 
 
 def generate_pkce_pair() -> Tuple[str, str, str]:
