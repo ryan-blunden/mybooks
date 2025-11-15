@@ -1,0 +1,15 @@
+- model: auth.user
+  pk: 1
+  fields:
+    password: pbkdf2_sha256$1000000$mwCLthWC6tNAM2miS9NS1y$v40+rKlASPlVkOmrIK3jYwQlFCrhz/k6N0jG5a3GVUY=
+    last_login: 2025-11-13 01:01:29.173132+00:00
+    is_superuser: true
+    username: ryan.blunden@gmail.com
+    first_name: Ryan
+    last_name: Blunden
+    email: ryan.blunden@gmail.com
+    is_staff: true
+    is_active: true
+    date_joined: 2025-11-13 01:01:23.837847+00:00
+    groups: []
+    user_permissions: []

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% load static tz tailwind_tags %}
+{% localtime on %}
+    {% block head %}
+        {{ block.super }}
+    {% endblock %}
+
+    {% block body %}
+        <div>
+            {% block header %}
+                <header class="px-5 border-gray-200 bg-gray-50 dark:bg-gray-800 dark:border-gray-700 border-b-1">
+                    <div class="flex items-center py-4">
+                        <h1
+                            class="flex-1 text-2xl font-semibold whitespace-nowrap text-gray-900 dark:text-white"
+                        >
+                            {% block header_title %}Page Title{% endblock %}
+                        </h1>
+                        <div class="flex flex-row items-center space-x-3">
+                            {% block header_content %}{% endblock %}
+                            {% if user.is_authenticated %}
+                                {% if user.is_superuser %}
+                                    <a href="{% url 'admin:index' %}" class="inline-block rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                                        Admin
+                                    </a>
+                                {% endif %}
+                                <form method="post" action="{% url 'signout' %}" class="inline-block">
+                                    {% csrf_token %}
+                                    <button type="submit" class="inline-block rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                                        Sign Out
+                                    </button>
+                                </form>
+                            {% else %}
+                                <a href="{% url 'signin' %}" class="inline-block rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800">
+                                    Sign In
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </header>
+            {% endblock header %}
+
+            <section class="w-full h-full py-5 px-8 text-gray-900 dark:text-white">
+                {% include "includes/messages.html" %}
+                {% block content %}{% endblock %}
+            </section>
+        </div>
+        {% block body_end %}{% endblock %}
+    {% endblock body %}
+{% endlocaltime %}

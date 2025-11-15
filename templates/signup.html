@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Create Account | My Books{% endblock %}
+
+{% block body %}
+  <section class="bg-gray-100 dark:bg-gray-900">
+    <div class="flex flex-col items-center px-6 py-8 mx-auto sm:h-screen lg:py-0">
+      <div class="w-3/4 max-w-[600px] bg-white rounded-lg shadow border-gray-200 dark:border md:mt-20 xl:p-0 dark:bg-gray-800 dark:border-gray-700">
+        <div class="p-6 space-y-4 md:space-y-6 sm:p-8">
+          <h1 class="text-xl text-center font-bold leading-tight tracking-tight text-gray-900 md:text-2xl dark:text-white">
+            <span>Create your My Books account</span>
+          </h1>
+
+          {% include "includes/messages.html" %}
+
+          {% if form.non_field_errors %}
+            <div class="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-400 dark:bg-red-900/40 dark:text-red-200">
+              {% for error in form.non_field_errors %}
+                <p>{{ error }}</p>
+              {% endfor %}
+            </div>
+          {% endif %}
+
+          <form class="space-y-4 md:space-y-6" action="{% url 'signup' %}" method="post">
+            <input type="hidden" name="next" value="{{ next }}">
+            {% csrf_token %}
+            <div>
+              <label for="{{ form.username.id_for_label }}"
+                     class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Username</label>
+              <input type="text"
+                     name="{{ form.username.html_name }}"
+                     id="{{ form.username.id_for_label }}"
+                     value="{{ form.username.value|default_if_none:'' }}"
+                     autocomplete="username"
+                     class="bg-gray-50 border {% if form.username.errors %}border-red-500 focus:ring-red-500 focus:border-red-500{% else %}border-gray-300 focus:ring-primary-600 focus:border-primary-600{% endif %} text-gray-900 rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                     placeholder=""
+                     required>
+              {% if form.username.errors %}
+                <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ form.username.errors|join:" " }}</p>
+              {% endif %}
+            </div>
+
+            <div>
+              <label for="{{ form.password1.id_for_label }}"
+                     class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Password</label>
+              <input type="password"
+                     name="{{ form.password1.html_name }}"
+                     id="{{ form.password1.id_for_label }}"
+                     autocomplete="new-password"
+                     class="bg-gray-50 border {% if form.password1.errors %}border-red-500 focus:ring-red-500 focus:border-red-500{% else %}border-gray-300 focus:ring-primary-600 focus:border-primary-600{% endif %} text-gray-900 rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                     placeholder=""
+                     required>
+              {% if form.password1.errors %}
+                <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ form.password1.errors|join:" " }}</p>
+              {% endif %}
+            </div>
+
+            <div>
+              <label for="{{ form.password2.id_for_label }}"
+                     class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Confirm password</label>
+              <input type="password"
+                     name="{{ form.password2.html_name }}"
+                     id="{{ form.password2.id_for_label }}"
+                     autocomplete="new-password"
+                     class="bg-gray-50 border {% if form.password2.errors %}border-red-500 focus:ring-red-500 focus:border-red-500{% else %}border-gray-300 focus:ring-primary-600 focus:border-primary-600{% endif %} text-gray-900 rounded-lg block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                     placeholder=""
+                     required>
+              {% if form.password2.errors %}
+                <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ form.password2.errors|join:" " }}</p>
+              {% endif %}
+            </div>
+
+            <div class="flex items-center justify-between">
+              {% component "Link" url='{% url "signin" %}' %}Already have an account? Sign in{% endcomponent %}
+            </div>
+            <button type="submit" class="text-white bg-blue-700 hover:bg-blue-800 font-medium rounded-lg text-sm px-5 py-2 me-2 dark:bg-blue-600 dark:hover:bg-blue-700 hover:cursor-pointer">Create account</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', ()=> {
+      const usernameField = document.querySelector('#{{ form.username.id_for_label }}');
+      if (usernameField) {
+        usernameField.focus();
+      }
+    });
+  </script>
+{% endblock body %}
