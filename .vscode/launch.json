@@ -1,0 +1,63 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Server",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "django",
+      "args": [
+        "runserver",
+        "0.0.0.0:8080"
+      ],
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
+      "django": true,
+      "justMyCode": false,
+      "env": {
+        "DOPPLER_ENV": "1"
+      }
+    },
+    {
+      "name": "manage.py",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "manage.py",
+      "args": [
+        "${command:pickArgs}"
+      ],
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
+      "django": true,
+      "justMyCode": false,
+      "env": {
+        "DOPPLER_ENV": "1"
+      }
+    },
+    {
+      "name": "Client",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/.venv/bin/streamlit",
+      "args": [
+        "run",
+        "client/client.py",
+        "--server.port",
+        "9090",
+        "--logger.level",
+        "info",
+        "--server.headless",
+        "true"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "envFile": "${workspaceFolder}/.env",
+      "justMyCode": false,
+      "env": {
+        "DOPPLER_ENV": "1",
+        "DOPPLER_CONFIG": "client",
+        "PYTHONPATH": "."
+      }
+    },
+  ]
+}

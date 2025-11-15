@@ -1,0 +1,167 @@
+[project]
+name = "mybooks"
+version = "0.0.0"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+  "django",
+  "django-admin-interface",
+  "psutil",
+  "whitenoise",
+  "gunicorn",
+  "django-components",
+  "django-extensions",
+  "rust-just",
+  "pyopenssl",
+  "python-dotenv",
+  "pydantic",
+  "raven",
+  "sentry-sdk[django]",
+  "logfire[django,sqlite3]",
+  "django-tailwind[reload]",
+  "django-health-check",
+  "django-oauth-toolkit",
+  "djangorestframework",
+  "django-oauth-toolkit-dcr",
+  "django-cors-headers",
+  "drf-spectacular",
+  "django-filter",
+  "requests",
+  "streamlit",
+  "pydantic-ai",
+  "requests-oauthlib",
+  "honcho",
+  "streamlit-cookies-controller",
+  "truststore",
+]
+
+[dependency-groups]
+dev = [
+  "Werkzeug[watchdog]",
+  "ipdb",
+  "flake8",
+  "flake8-isort",
+  "black",
+  "pylint-django",
+  "doppler-env",
+  "django-debug-toolbar",
+  "pre-commit",
+  "ipython",
+  "djlint",
+  "debugpy",
+  "pylint-django",
+  "prospector",
+  "autoflake",
+  "ruff",
+  "ty",
+  "django-types",
+  "honcho",
+  "httpie",
+  "djhtml",
+]
+
+[tool.setuptools]
+packages = ["app"]
+
+[tool.black]
+line-length = 150
+target-version = ['py313']
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | build
+  | buck-out
+  | build
+  | dist
+  | migrations
+)/
+'''
+
+[tool.isort]
+profile = "black"
+line_length = 150
+known_first_party = ["app"]
+skip = [".venv/"]
+skip_glob = ["**/migrations/*.py"]
+
+[tool.pylint.MASTER]
+ignore = '.git,.venv,node_modules,*/migrations/*'
+load-plugins = ["pylint_django"]
+django-settings-module = "mybooks.settings"
+
+[tool.pylint.FORMAT]
+max-line-length = 150
+
+[tool.pylint."MESSAGES CONTROL"]
+disable = ["missing-docstring", "invalid-name", "import-outside-toplevel", "too-few-public-methods", "unspecified-encoding", "too-many-locals", "redefined-builtin", "line-too-long"]
+
+[tool.pylint.DESIGN]
+max-parents = 13
+
+[tool.pylint.TYPECHECK]
+generated-members = [
+  "REQUEST",
+  "acl_users",
+  "aq_parent",
+  "[a-zA-Z]+_set{1,2}",
+  "save",
+  "delete",
+]
+
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+  ".bzr",
+  ".direnv",
+  ".eggs",
+  ".git",
+  ".github",
+  ".hg",
+  ".ruff_cache",
+  ".svn",
+  ".tox",
+  ".venv",
+  "__pypackages__",
+  "_build",
+  "build",
+  "dist",
+  "migrations",
+  "node_modules",
+  "static",
+]
+# Same as Black.
+line-length = 150
+# Assume Python 3.12.
+target-version = "py313"
+
+[tool.ruff.lint]
+# Allow unused variables when underscore-prefixed.
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+# Allow autofix for all enabled rules (when `--fix`) is provided.
+fixable = ["A", "B", "C", "D", "E", "F"]
+ignore = ["E501", "E741"]                # temporary
+per-file-ignores = {}
+# Enable Pyflakes `E` and `F` codes by default.
+select = ["E", "F"]
+unfixable = []
+
+[tool.djlint]
+# H017: Void tags should be self closing.
+# H031:	Consider adding meta keywords.
+ignore = "H017,H031"
+preserve_blank_lines = true
+indent = 2
+
+# ==== autoflake ====
+[tool.autoflake]
+remove-all-unused-imports = true
+remove-unused-variables = true
+remove-duplicate-keys = true
+ignore-init-module-imports = true
+expand-star-imports = true
+exclude = ["*/migrations/*", ".venv", "node_modules"]

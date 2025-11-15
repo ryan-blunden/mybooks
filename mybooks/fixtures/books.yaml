@@ -1,0 +1,245 @@
+- model: books.author
+  pk: 1
+  fields:
+    name: K.M. Fajardo
+    image: authors/k.m._fajardo.jpg
+    biography: K.M. Fajardo is a Filipino American author known for her innovative
+      science fiction works. She has contributed to various anthologies and is recognized
+      for her exploration of cyberpunk themes and diaspora narratives.
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.author
+  pk: 2
+  fields:
+    name: Ken Liu
+    image: authors/ken_liu.jpg
+    biography: Ken Liu is an American author of speculative fiction. He is the author
+      of The Grace of Kings and The Poppy War series. His work has won the Hugo Award,
+      Nebula Award, and World Fantasy Award.
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.author
+  pk: 3
+  fields:
+    name: Hiron Ennes
+    image: authors/hiron_ennes.jpg
+    biography: Hiron Ennes is a speculative fiction author whose work blends dark
+      fantasy with scientific concepts. Known for intricate worldbuilding and complex
+      characters.
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.author
+  pk: 4
+  fields:
+    name: Daniel H. Wilson
+    image: authors/daniel_h._wilson.jpg
+    biography: Daniel H. Wilson is a New York Times bestselling author and a Cherokee
+      Nation citizen who works as a threat forecaster for NASA. He is best known for
+      his novel Robopocalypse.
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.author
+  pk: 5
+  fields:
+    name: Kathleen S. Allen
+    image: authors/kathleen_s._allen.jpg
+    biography: Kathleen S. Allen is an author of gothic fiction and dark fantasy.
+      Her works explore themes of science, morality, and the supernatural with atmospheric
+      storytelling.
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.author
+  pk: 6
+  fields:
+    name: Lyndsay Ely
+    image: authors/lyndsay_ely.jpg
+    biography: Lyndsay Ely is an author of epic fantasy known for complex magic systems
+      and compelling character arcs. Her debut novels have been praised for their
+      immersive worldbuilding.
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.author
+  pk: 7
+  fields:
+    name: Eric Heisserer
+    image: authors/eric_heisserer.jpg
+    biography: Eric Heisserer is an Oscar-nominated screenwriter and novelist. He
+      is best known for his work on the film Arrival and his screenwriting achievements
+      in science fiction.
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.author
+  pk: 8
+  fields:
+    name: Elaine Ho
+    image: authors/elaine_ho.jpg
+    biography: Elaine Ho is an author of epic fantasy and science fiction. Her work
+      explores themes of power, resistance, and identity in richly imagined worlds.
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.author
+  pk: 9
+  fields:
+    name: Jill Tew
+    image: authors/jill_tew.jpg
+    biography: Jill Tew is a science fiction and dystopian fiction author. Her novels
+      blend romance, political intrigue, and speculative worldbuilding to create compelling
+      narratives.
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.author
+  pk: 10
+  fields:
+    name: Jennifer L. Holm
+    image: authors/jennifer_l._holm.jpg
+    biography: Jennifer L. Holm is a three-time Newbery Honor winning author known
+      for her young adult and middle-grade fiction. Her works often explore themes
+      of resilience and identity.
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.book
+  pk: 1
+  fields:
+    title: Local Heavens
+    tagline: A cyberpunk reimagining set in 2075
+    description: A corporate hacker. An elusive billionaire. A society trying to survive
+      the American Nightmare. New York City, 2075. Filipino American Nick Carraway
+      has just moved to the heart of the fractured New Americas, where he's struck
+      by the city's contradictions—shining corporate towers casting bleak shadows
+      over the slums of a crumbling middle class.
+    image: books/local_heavens.jpg
+    author: 1
+    genre: science_fiction
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.book
+  pk: 2
+  fields:
+    title: All That We See or Seem
+    tagline: A sci-fi thriller about virtual reality and dreams
+    description: Award-winning author Ken Liu returns with his first sci-fi thriller
+      in a brand-new series following former "orphan hacker" Julia Z as she is thrust
+      into a high-stakes adventure where she must use her cybersecurity and hacking
+      skills to unravel a virtual reality mystery, rescue a kidnapped dream artist,
+      and confront the blurred lines between technology, identity, and the power of
+      shared dreams.
+    image: books/all_that_we_see_or_seem.jpg
+    author: 2
+    genre: science_fiction
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.book
+  pk: 3
+  fields:
+    title: The Works of Vermin
+    tagline: A dark fantasy set in a city built on a tree
+    description: He was sent to kill a pest. Instead, he found a monster. Enter the
+      decadent, deadly city of Tiliard, a metropolis carved into the stump of an ancient
+      tree. In its canopy, the pampered elite warp minds with toxic perfume; in its
+      roots, gangs of exterminators hunt a colossal worm with an appetite for beauty.
+    image: books/the_works_of_vermin.jpg
+    author: 3
+    genre: science_fiction
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.book
+  pk: 4
+  fields:
+    title: Hole in the Sky
+    tagline: A Native American First Contact story
+    description: A gripping sci-fi thriller—and Native American First Contact story—from
+      the New York Times bestselling author of Robopocalypse, Daniel Wilson, who is
+      a Cherokee Nation citizen and works as a threat forecaster for NASA. Heliopause
+      is a real place—the very outer edge of our solar system where the sun's solar
+      winds are no longer strong enough to keep debris and intrusions from bombarding
+      our system.
+    image: books/hole_in_the_sky.jpg
+    author: 4
+    genre: science_fiction
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.book
+  pk: 5
+  fields:
+    title: The Resurrectionist
+    tagline: A gothic tale of medical science gone wrong
+    description: A young Victorian woman unwittingly unleashes a monster into being
+      in this gothic tale of medical mystery and sinister suspense. When seventeen-year-old
+      Dilly Rothbart finds her recently deceased father's hidden journal, her entire
+      world is upended. For what she finds within are the steps to bring a dead soul
+      back to life.
+    image: books/the_resurrectionist.jpg
+    author: 5
+    genre: science_fiction
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.book
+  pk: 6
+  fields:
+    title: The Lost Reliquary
+    tagline: Epic fantasy about a warrior bound to a goddess
+    description: 'A divinely-blessed warrior bound to the last living goddess plots
+      deicide to win her freedom in this propulsive epic fantasy. The Devoted Lands
+      was once home to many gods: Salt, Stone, Storm, Green, Shadow. Now, after centuries
+      of devastating wars, only Tempestra-Innara, the Eternal Flame, remains.'
+    image: books/the_lost_reliquary.jpg
+    author: 6
+    genre: fantasy
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.book
+  pk: 7
+  fields:
+    title: Simultaneous
+    tagline: A mind-bending speculative thriller
+    description: From the Oscar-nominated screenwriter of Arrival comes a phenomenal
+      speculative thriller about a federal agent and a therapist who team up to stop
+      an otherworldly killer. Federal agent Grant Lukather works for an unknown department
+      of Homeland Security called Predictive Analytics.
+    image: books/simultaneous.jpg
+    author: 7
+    genre: science_fiction
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.book
+  pk: 8
+  fields:
+    title: Cry, Voidbringer
+    tagline: A gripping saga of freedom and control
+    description: 'In a broken system, do you save yourself or fight for the people
+      you love? With the godspower waning, the queen of Ashvi has had to find another
+      way to bolster her fight against her imperialist oppressors. The solution: wrenching
+      children of other cultures from their homes and conscripting them into service.'
+    image: books/cry,_voidbringer.jpg
+    author: 8
+    genre: science_fiction
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.book
+  pk: 9
+  fields:
+    title: An Ocean Apart
+    tagline: A dystopian novel with political intrigue
+    description: An electrifying dystopian novel packed with a tantalizing love triangle,
+      gripping political intrigue, and a Bachelor-style competition. Eden Lowell has
+      plenty to be frustrated about. In the flooded Marshes of former Miami, each
+      day is about survival.
+    image: books/an_ocean_apart.jpg
+    author: 9
+    genre: science_fiction
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00
+- model: books.book
+  pk: 10
+  fields:
+    title: Outside
+    tagline: A story of a girl escaping a compound
+    description: 'From three-time Newbery Honor winner Jennifer L. Holm, a chilling
+      but heartfelt story of a girl being raised in a compound who doesn''t understand
+      how isolated and unusual her life is... until she must encounter the outside
+      world. Razzi has always been told: Don''t go Outside.'
+    image: books/outside.jpg
+    author: 10
+    genre: science_fiction
+    created_at: 2025-11-13 00:00:00+00:00
+    updated_at: 2025-11-13 00:00:00+00:00

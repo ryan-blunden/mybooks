@@ -1,0 +1,360 @@
+{% extends "app_base.html" %} {% block title %}OAuth 2.1 DCR PKCE Auth Flow{% endblock %} {% block header_title %}OAuth
+2.1 DCR PKCE Auth Flow{% endblock header_title %} {% block content %} {% csrf_token %}
+
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8">
+        <p class="text-gray-600 dark:text-gray-400">
+            Test OAuth 2.1 authorization code flow with PKCE and dynamic client registration (DCR).
+        </p>
+    </div>
+
+    {% if oauth_tokens %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-4 mb-8">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Access Tokens Response</h2>
+        <pre
+            class="bg-gray-100 dark:bg-gray-900 rounded p-4 text-sm font-mono overflow-x-auto border border-gray-200 dark:border-gray-700"
+        >
+{{ oauth_tokens }}</pre
+        >
+    </div>
+    {% endif %} {% if register_response_json %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-4 mb-8">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Register Response</h2>
+        <pre
+            class="bg-gray-100 dark:bg-gray-900 rounded p-4 text-sm font-mono overflow-x-auto border border-gray-200 dark:border-gray-700"
+        >
+{{ register_response_json }}</pre
+        >
+    </div>
+    {% endif %} {% if request.GET.code %}
+    <div class="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-4 mb-8">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Exchange Code for Tokens</h2>
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Token Request Payload</label>
+            <pre
+                class="bg-gray-100 dark:bg-gray-900 rounded p-4 text-sm font-mono overflow-x-auto border border-gray-200 dark:border-gray-700"
+            >
+{{ token_request_payload }}</pre
+            >
+        </div>
+
+        <div class="space-y-4">
+            <form method="post" action="{% url 'oauth-apps-get-tokens' %}">
+                {% csrf_token %}
+                <input type="hidden" name="code" value="{{ request.GET.code }}" />
+                <input type="hidden" name="state" value="{{ request.GET.state }}" />
+                <button
+                    class="block mb-4 rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                    type="submit"
+                >
+                    Request Access Tokens
+                </button>
+            </form>
+
+            <div id="auth-details" style="display: none" class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg">
+                <h4 class="font-semibold text-gray-900 dark:text-gray-300 mb-3">PKCE Parameters:</h4>
+                <div class="space-y-2 text-sm font-mono">
+                    <div><strong>Code Verifier:</strong> <span id="code-verifier" class="break-all"></span></div>
+                    <div><strong>Code Challenge:</strong> <span id="code-challenge" class="break-all"></span></div>
+                    <div><strong>State:</strong> <span id="state" class="break-all"></span></div>
+                </div>
+
+                <div class="mt-4">
+                    <a
+                        id="auth-link"
+                        href="#"
+                        target="_blank"
+                        class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-gradient-to-r from-red-400 via-red-500 to-red-600 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-red-300 dark:focus:ring-red-800 rounded-lg"
+                    >
+                        <svg class="w-4 h-4 me-2" fill="currentColor" viewBox="0 0 20 20">
+                            <path
+                                fill-rule="evenodd"
+                                d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"
+                                clip-rule="evenodd"
+                            ></path>
+                        </svg>
+                        Go to Authorization Page
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="bg-white dark:bg-gray-800 px-4 py-4 mb-5 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">Dynamic Client Registration</h2>
+        <p class="text-gray-600 dark:text-gray-400 mb-4">Register a new OAuth application using the DCR endpoint.</p>
+        {% if register_response and not user.is_authenticated %}
+        <a
+            href="{% url 'oauth-apps-authorize' %}?client_id={{ register_response.client_id }}"
+            class="inline-block mb-2 rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+        >
+            Authorize Application
+        </a>
+        {% else %}
+        <button
+            data-modal-target="dcr-modal"
+            data-modal-toggle="dcr-modal"
+            class="inline-block mb-2 rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+            type="button"
+        >
+            Register Application
+        </button>
+        {% endif %}
+
+        <div
+            id="dcr-modal"
+            tabindex="-1"
+            aria-hidden="true"
+            class="hidden overflow-y-auto overflow-x-hidden fixed top-0 right-0 left-0 z-50 justify-center items-center w-full md:inset-0 h-[calc(100%-1rem)] max-h-full"
+        >
+            <div class="relative p-4 w-full max-w-2xl max-h-full">
+                <div class="relative bg-white rounded-lg shadow-sm dark:bg-gray-700">
+                    <div
+                        class="flex items-center justify-between p-4 md:p-5 border-b rounded-t dark:border-gray-600 border-gray-200"
+                    >
+                        <h3 class="text-xl font-semibold text-gray-900 dark:text-white">Register New OAuth Apps</h3>
+                        <button
+                            type="button"
+                            class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white"
+                            data-modal-hide="dcr-modal"
+                        >
+                            <svg
+                                class="w-3 h-3"
+                                aria-hidden="true"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 14 14"
+                            >
+                                <path
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"
+                                />
+                            </svg>
+                            <span class="sr-only">Close modal</span>
+                        </button>
+                    </div>
+
+                    <div class="p-4 md:p-5 space-y-4">
+                        <form
+                            class="space-y-4 w-full"
+                            id="dcr-form"
+                            method="post"
+                            action="{% url 'oauth-apps-register' %}"
+                        >
+                            {% csrf_token %}
+                            <div>
+                                <label
+                                    for="client_name"
+                                    class="block mb-1 text-sm font-medium text-gray-900 dark:text-white"
+                                    >Client Name</label
+                                >
+                                <p class="mt-1 mb-2 text-sm text-gray-500 dark:text-gray-400">Defined by the client.</p>
+                                <input
+                                    type="text"
+                                    id="client_name"
+                                    name="client_name"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                    value="{{ registration_data.client_name }}"
+                                />
+                            </div>
+                            <div class="mt-6">
+                                <label
+                                    for="redirect_uris"
+                                    class="block mb-1 text-sm font-medium text-gray-900 dark:text-white"
+                                    >Redirect URIs</label
+                                >
+                                <p class="mt-1 mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                    Allow-list of redirect URIs where the authorization server can send the
+                                    authorization code.
+                                </p>
+                                <input
+                                    type="text"
+                                    id="redirect_uris"
+                                    name="redirect_uris"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                    value="{{ registration_data.redirect_uris|join:', ' }}"
+                                />
+                            </div>
+                            <div class="mt-6">
+                                <label
+                                    for="grant_types"
+                                    class="block mb-1 text-sm font-medium text-gray-900 dark:text-white"
+                                    >Grant Types</label
+                                >
+                                <p class="mt-1 mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                    Authorization code flow uses PKCE to securely exchange an authorization code for
+                                    tokens without needing a client secret.
+                                </p>
+                                <input
+                                    type="text"
+                                    id="grant_types"
+                                    name="grant_types"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                    value="{{ registration_data.grant_types|join:', ' }}"
+                                    readonly
+                                />
+                            </div>
+                            <div class="mt-6">
+                                <label
+                                    for="response_types"
+                                    class="block mb-1 text-sm font-medium text-gray-900 dark:text-white"
+                                    >Response Types</label
+                                >
+                                <p class="mt-1 mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                    Receive the authorization code in the redirect query string.
+                                </p>
+                                <input
+                                    type="text"
+                                    id="response_types"
+                                    name="response_types"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                    value="{{ registration_data.response_types|join:', ' }}"
+                                    readonly
+                                />
+                            </div>
+                            <div class="mt-6">
+                                <label for="scope" class="block mb-1 text-sm font-medium text-gray-900 dark:text-white"
+                                    >Scope</label
+                                >
+                                <p class="mt-1 mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                    Application-defined resource access scopes.
+                                </p>
+                                <input
+                                    type="text"
+                                    id="scope"
+                                    name="scope"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                    value="{{ registration_data.scope|join:', ' }}"
+                                />
+                            </div>
+                            <div class="mt-6">
+                                <label
+                                    for="token_endpoint_auth_method"
+                                    class="block mb-1 text-sm font-medium text-gray-900 dark:text-white"
+                                    >Token Endpoint Auth Method</label
+                                >
+                                <p class="mt-1 mb-2 text-sm text-gray-500 dark:text-gray-400">
+                                    How the client will authenticate with the token endpoint. Is none for public
+                                    clients.
+                                </p>
+                                <input
+                                    type="text"
+                                    id="token_endpoint_auth_method"
+                                    name="token_endpoint_auth_method"
+                                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-600 dark:border-gray-500 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                    value="{{ registration_data.token_endpoint_auth_method }}"
+                                />
+                            </div>
+                            <div class="flex justify-center">
+                                <button
+                                    type="submit"
+                                    class="block mb-4 rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
+                                >
+                                    Register
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 px-4 py-4 mb-6 rounded-lg border border-gray-200 dark:border-gray-700">
+        <h2 class="text-xl font-semibold text-gray-900 dark:text-white mb-4">OAuth App</h2>
+        {% if applications %}
+        <div class="space-y-4">
+            {% for app in applications %}
+            <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600">
+                <div class="flex items-center justify-between">
+                    <div class="flex-1">
+                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">{{ app.name }}</h3>
+                        <div class="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                            <dl class="space-y-0.25">
+                                <div class="flex items-center">
+                                    <dt class="font-medium text-gray-700 dark:text-gray-300 w-24">Client Type</dt>
+                                    <dd class="text-gray-900 dark:text-white flex-1 text-left">
+                                        {{ app.get_client_type_display }}
+                                    </dd>
+                                </div>
+                                <div class="flex items-center">
+                                    <dt class="font-medium text-gray-700 dark:text-gray-300 w-24">Grant Type</dt>
+                                    <dd class="text-gray-900 dark:text-white flex-1 text-left">
+                                        {{ app.get_authorization_grant_type_display }}
+                                    </dd>
+                                </div>
+                                <div class="flex items-center">
+                                    <dt class="font-medium text-gray-700 dark:text-gray-300 w-24">Client ID</dt>
+                                    <dd class="text-gray-900 dark:text-white flex-1 text-left">{{ app.client_id }}</dd>
+                                </div>
+                                <div class="flex items-center">
+                                    <dt class="font-medium text-gray-700 dark:text-gray-300 w-24">Redirect URIs</dt>
+                                    <dd class="text-gray-900 dark:text-white flex-1 text-left">
+                                        {{ app.redirect_uris }}
+                                    </dd>
+                                </div>
+                            </dl>
+                        </div>
+                    </div>
+                    {% if request.user.is_authenticated and not request.GET.code and not oauth_tokens %}
+                    <div class="flex items-center justify-end h-full">
+                        <a
+                            href="{% url 'oauth-apps-authorize' app.client_id %}"
+                            class="block rounded-lg bg-primary-700 px-4 py-2 font-medium text-white dark:bg-primary-600 hover:cursor-pointer hover:bg-primary-800 focus:outline-none focus:ring-4 focus:ring-primary-300 dark:hover:bg-primary-700 dark:focus:ring-primary-800 text-center"
+                        >
+                            Authorize
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-8">
+            <svg class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                />
+            </svg>
+            <h3 class="mt-2 font-medium text-gray-900 dark:text-gray-300">No application found</h3>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="bg-gray-50 dark:bg-gray-800 rounded-lg px-4 py-4 border border-gray-200 dark:border-gray-700">
+        <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-2">OAuth Server Discovery Links</h3>
+        <p class="text-gray-600 dark:text-gray-50">
+            <a
+                href="{{ oauth_protected_resource_metadata_url }}"
+                class="block mt-2 mb-2 font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                >{{ oauth_protected_resource_metadata_url }}</a
+            >
+        </p>
+        <p class="text-gray-600 dark:text-gray-50">
+            <a
+                href="{{ oauth_auth_server_metadata_url }}"
+                class="block mt-2 mb-2 font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                >{{ oauth_auth_server_metadata_url }}</a
+            >
+        </p>
+        {% if oauth_oidc_metadata_url %}
+        <p class="text-gray-600 dark:text-gray-50">
+            <a
+                href="{{ oauth_metadata_url }}"
+                class="block mb-4 font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                >{{ oauth_oidc_metadata_url }}</a
+            >
+        </p>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock%}
